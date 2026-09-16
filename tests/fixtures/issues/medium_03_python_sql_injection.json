@@ -1,0 +1,28 @@
+{
+  "issue_id": "medium-003",
+  "title": "SQL injection vulnerability in user search endpoint",
+  "language": "python",
+  "complexity": "medium",
+  "body": "## Bug Description\n\nThe `search_users` function constructs SQL queries using string concatenation, making it vulnerable to SQL injection attacks.\n\n## Error Message\n\nNo immediate error, but security scanner reports:\n```\nSecurity Warning: SQL Injection vulnerability detected\nLocation: src/database/user_repository.py:78\nSeverity: HIGH\n```\n\n## Vulnerable Code\n\n```python\n# src/database/user_repository.py:78\ndef search_users(self, query: str) -> List[User]:\n    sql = f\"SELECT * FROM users WHERE name LIKE '%{query}%'\"\n    cursor.execute(sql)\n    return cursor.fetchall()\n```\n\n## Steps to Reproduce\n\n1. Call `search_users(\"test' OR '1'='1\")`\n2. SQL becomes: `SELECT * FROM users WHERE name LIKE '%test' OR '1'='1%'`\n3. This returns all users, bypassing the intended search filter\n4. Attacker could potentially use UNION injection or other attacks\n\n## Expected Behavior\n\n1. User input should be properly sanitized\n2. Should use parameterized queries\n3. SQL injection attempts should be safely escaped\n\n## Actual Behavior\n\nRaw user input is directly interpolated into SQL query, allowing arbitrary SQL execution.\n\n## Security Impact\n\n- Attackers can read all user data\n- Potential for data modification or deletion\n- Could expose sensitive information\n\n## Additional Context\n\n- Found by security audit\n- Similar pattern exists in `search_by_email` method\n- Need to use parameterized queries with `?` placeholders",
+  "repository": {
+    "type": "python",
+    "test_framework": "pytest",
+    "test_command": "pytest tests/test_user_repository.py::test_sql_injection_prevention -v"
+  },
+  "expected_fix": {
+    "file": "src/database/user_repository.py",
+    "description": "Replace string interpolation with parameterized queries using ? placeholders",
+    "validation": "Security test should pass: injection attempt should be safely escaped"
+  },
+  "setup_instructions": [
+    "Create src/database/user_repository.py with UserRepository class",
+    "Create tests/test_user_repository.py with SQL injection test",
+    "Requires sqlite3 or similar database library"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "medium",
+    "estimated_fix_time": "10 minutes",
+    "security_issue": true
+  }
+}

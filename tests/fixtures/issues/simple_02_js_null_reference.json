@@ -1,0 +1,26 @@
+{
+  "issue_id": "simple-002",
+  "title": "TypeError: Cannot read property 'length' of null",
+  "language": "javascript",
+  "complexity": "simple",
+  "body": "## Bug Description\n\nThe `getUserName` function throws a TypeError when user object is null.\n\n## Error Message\n\n```\nTypeError: Cannot read property 'name' of null\n```\n\n## Stack Trace\n\n```\nTypeError: Cannot read property 'name' of null\n    at getUserName (src/user.js:8:25)\n    at processUser (src/user.js:15:18)\n    at Object.<anonymous> (tests/user.test.js:12:5)\n```\n\n## Steps to Reproduce\n\n1. Call `getUserName(null)`\n2. Function attempts to access `user.name`\n3. TypeError is thrown\n\n## Expected Behavior\n\nShould return a default value like 'Guest' or 'Unknown' when user is null.\n\n## Actual Behavior\n\nThrows TypeError without null check.",
+  "repository": {
+    "type": "nodejs",
+    "test_framework": "jest",
+    "test_command": "npm test -- user.test.js"
+  },
+  "expected_fix": {
+    "file": "src/user.js",
+    "description": "Add null check before accessing user.name property",
+    "validation": "Test should pass: 'handles null user gracefully'"
+  },
+  "setup_instructions": [
+    "Create src/user.js with getUserName function",
+    "Create tests/user.test.js with null user test case"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "simple",
+    "estimated_fix_time": "1 minute"
+  }
+}
