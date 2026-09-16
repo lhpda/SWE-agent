@@ -1,0 +1,27 @@
+{
+  "issue_id": "medium-001",
+  "title": "Race condition in async cache implementation causing stale data",
+  "language": "python",
+  "complexity": "medium",
+  "body": "## Bug Description\n\nThe async cache implementation has a race condition where multiple concurrent requests for the same key can trigger multiple cache misses and duplicate backend calls.\n\n## Error Message\n\n```\nAssertionError: Expected 1 backend call but got 3\n```\n\n## Stack Trace\n\n```\nTraceback (most recent call last):\n  File \"tests/test_cache.py\", line 45, in test_concurrent_cache_access\n    assert backend_call_count == 1, f\"Expected 1 backend call but got {backend_call_count}\"\nAssertionError: Expected 1 backend call but got 3\n```\n\n## Steps to Reproduce\n\n1. Create an async cache with `AsyncCache()`\n2. Make 3 concurrent calls to `cache.get('key1')` using `asyncio.gather`\n3. Observe that the backend is called 3 times instead of once\n4. The first call should fetch from backend and cache it\n5. Subsequent calls should wait for the first to complete\n\n## Expected Behavior\n\nWhen multiple concurrent requests arrive for the same uncached key:\n1. First request triggers backend call\n2. Other requests wait for the first to complete\n3. All requests receive the same cached value\n4. Backend is called exactly once\n\n## Actual Behavior\n\nEach concurrent request sees the cache as empty and triggers its own backend call, causing duplicate work and potential inconsistency.\n\n## Additional Context\n\nThe issue is in `src/cache/async_cache.py` in the `get` method. Need to implement a lock per key to prevent concurrent fetches.",
+  "repository": {
+    "type": "python",
+    "test_framework": "pytest",
+    "test_command": "pytest tests/test_cache.py::test_concurrent_cache_access -v"
+  },
+  "expected_fix": {
+    "file": "src/cache/async_cache.py",
+    "description": "Add per-key locking mechanism using asyncio.Lock to prevent race conditions",
+    "validation": "Test should pass: backend should be called exactly once for concurrent requests"
+  },
+  "setup_instructions": [
+    "Create src/cache/async_cache.py with AsyncCache class",
+    "Create tests/test_cache.py with concurrent access test",
+    "Requires asyncio and pytest-asyncio"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "medium",
+    "estimated_fix_time": "10-15 minutes"
+  }
+}

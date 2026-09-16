@@ -1,0 +1,119 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  pr-info:
+    name: PR Information
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|ci|chore|revert)(\(.+\))?: ]]; then
+            echo "::error::PR title must follow conventional commits format: type(scope): description"
+            echo "::error::Valid types: feat, fix, docs, style, refactor, perf, test, ci, chore, revert"
+            exit 1
+          fi
+
+      - name: Check for breaking changes
+        id: breaking
+        run: |
+          if [[ "${{ github.event.pull_request.title }}" =~ BREAKING\ CHANGE ]] || \
+             [[ "${{ github.event.pull_request.body }}" =~ BREAKING\ CHANGE ]]; then
+            echo "has_breaking=true" >> $GITHUB_OUTPUT
+            echo "::warning::This PR contains breaking changes"
+          else
+            echo "has_breaking=false" >> $GITHUB_OUTPUT
+          fi
+
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Run tests with coverage
+        run: poetry run pytest tests/ -v --cov=src/swe_agent --cov-report=xml --cov-report=term-missing -m "not integration"
+
+      - name: Get coverage percentage
+        id: coverage
+        run: |
+          COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE%"
+
+      - name: Comment coverage on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage = '${{ steps.coverage.outputs.percentage }}';
+            const coverageFloat = parseFloat(coverage);
+            let emoji = '✅';
+            let status = 'Good';
+
+            if (coverageFloat < 80) {
+              emoji = '⚠️';
+              status = 'Needs Improvement';
+            }
+            if (coverageFloat < 60) {
+              emoji = '❌';
+              status = 'Poor';
+            }
+
+            const comment = `## ${emoji} Coverage Report\n\n` +
+              `**Total Coverage:** ${coverage}%\n` +
+              `**Status:** ${status}\n\n` +
+              `Target: 80% coverage\n\n` +
+              `<details>\n` +
+              `<summary>View detailed coverage report</summary>\n\n` +
+              `Run \`poetry run pytest --cov=src/swe_agent --cov-report=html\` locally to see detailed coverage.\n` +
+              `</details>`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=${{ steps.coverage.outputs.percentage }}
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::warning::Coverage is below 80% threshold (current: $COVERAGE%)"
+          fi

@@ -1,0 +1,35 @@
+{
+  "issue_id": "negative-001",
+  "title": "Performance issue with slow sorting algorithm",
+  "language": "python",
+  "complexity": "negative",
+  "body": "## Bug Description\n\nThe application is slow when sorting large lists. It takes too long to sort 10,000 items.\n\n## Error Message\n\nNo error, just slow performance.\n\n## Steps to Reproduce\n\n1. Create a list with 10,000 random numbers\n2. Call the sort function\n3. It takes a long time\n\n## Expected Behavior\n\nIt should be faster.\n\n## Actual Behavior\n\nIt's slow.\n\n## Additional Context\n\nThe code is somewhere in the project. Maybe in a utils file or something. Not sure exactly where. It might be using bubble sort or something inefficient. Or maybe it's the database? Could also be a network issue.\n\nWould be great if someone could just make it faster overall.",
+  "repository": {
+    "type": "python",
+    "test_framework": "pytest",
+    "test_command": "pytest tests/"
+  },
+  "expected_fix": {
+    "file": "unknown",
+    "description": "Make it faster somehow",
+    "validation": "It should run faster"
+  },
+  "setup_instructions": [
+    "Unknown - issue description is too vague"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "negative",
+    "estimated_fix_time": "unknown",
+    "failure_reasons": [
+      "No specific error message or stack trace",
+      "No file location or code reference",
+      "Vague description without concrete reproduction steps",
+      "No measurable success criteria",
+      "Could be multiple different root causes",
+      "Performance issues require profiling, not just code inspection",
+      "No baseline metrics or performance requirements specified"
+    ],
+    "expected_outcome": "FAILED - insufficient information to localize or fix"
+  }
+}

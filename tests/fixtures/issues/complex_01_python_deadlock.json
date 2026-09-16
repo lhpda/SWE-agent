@@ -1,0 +1,31 @@
+{
+  "issue_id": "complex-001",
+  "title": "Distributed transaction deadlock in multi-threaded payment processor",
+  "language": "python",
+  "complexity": "complex",
+  "body": "## Bug Description\n\nThe payment processing system experiences deadlocks when multiple concurrent transactions attempt to update the same account balances in different orders, causing the application to freeze.\n\n## Error Message\n\n```\npsycopg2.extensions.TransactionRollbackError: deadlock detected\nDETAIL:  Process 12345 waits for ShareLock on transaction 67890; blocked by process 12346.\nProcess 12346 waits for ShareLock on transaction 67889; blocked by process 12345.\nHINT:  See server log for query details.\n```\n\n## Stack Trace\n\n```\nTraceback (most recent call last):\n  File \"src/payment/processor.py\", line 156, in process_transfer\n    self._update_balance(from_account, -amount)\n  File \"src/payment/processor.py\", line 203, in _update_balance\n    cursor.execute(\"UPDATE accounts SET balance = balance + %s WHERE id = %s\", (delta, account_id))\n  File \"psycopg2/cursor.py\", line 298, in execute\n    return super().execute(query, vars)\npsycopg2.extensions.TransactionRollbackError: deadlock detected\n```\n\n## Steps to Reproduce\n\n1. Create two accounts A and B with initial balances\n2. Thread 1: Transfer $100 from A to B\n   - Locks account A\n   - Attempts to lock account B\n3. Thread 2: Transfer $50 from B to A (simultaneously)\n   - Locks account B\n   - Attempts to lock account A\n4. Classic deadlock: each thread holds a lock the other needs\n5. Database detects deadlock and rolls back one transaction\n6. Application doesn't handle rollback gracefully\n\n## Expected Behavior\n\n1. Transactions should acquire locks in consistent order (e.g., always lock lower account ID first)\n2. Deadlock detection should trigger automatic retry with exponential backoff\n3. After max retries, return meaningful error to user\n4. System should remain stable and process other transactions\n\n## Actual Behavior\n\n- Locks are acquired in arbitrary order based on transaction parameters\n- No deadlock retry logic implemented\n- Deadlock exceptions bubble up and crash worker threads\n- Other transactions in the thread pool become stuck\n- Manual intervention required to restart workers\n\n## Root Cause Analysis\n\nThe `process_transfer` method in `src/payment/processor.py` has multiple issues:\n\n1. **Lock ordering inconsistency**: Updates accounts in order they appear (from, then to)\n2. **No retry logic**: Doesn't catch TransactionRollbackError\n3. **Thread pool exhaustion**: Failed threads aren't replaced\n4. **Cascading failures**: One deadlock can freeze the entire payment queue\n\n```python\ndef process_transfer(self, from_id: int, to_id: int, amount: Decimal):\n    with self.db.transaction():\n        # BUG: Lock order depends on parameter order\n        self._update_balance(from_id, -amount)  # Locks from_id\n        self._update_balance(to_id, amount)      # Locks to_id\n        self._create_transaction_log(from_id, to_id, amount)\n    # Missing: deadlock retry logic\n```\n\n## Additional Context\n\n- Occurs under high load (>50 concurrent transfers/sec)\n- Database: PostgreSQL 14 with default isolation level (Read Committed)\n- Thread pool size: 20 workers\n- Average 5-10 deadlocks per minute during peak hours\n- Need to implement:\n  1. Deterministic lock ordering (sort account IDs)\n  2. Retry decorator with exponential backoff\n  3. Thread pool health monitoring\n  4. Circuit breaker for cascading failures",
+  "repository": {
+    "type": "python",
+    "test_framework": "pytest",
+    "test_command": "pytest tests/test_payment_processor.py::test_concurrent_bidirectional_transfers -v -s"
+  },
+  "expected_fix": {
+    "file": "src/payment/processor.py",
+    "description": "Implement consistent lock ordering and deadlock retry logic with exponential backoff",
+    "validation": "Test should pass: 100 concurrent bidirectional transfers complete without deadlock failures"
+  },
+  "setup_instructions": [
+    "Create src/payment/processor.py with PaymentProcessor class",
+    "Create tests/test_payment_processor.py with concurrent transfer tests",
+    "Requires PostgreSQL database and psycopg2",
+    "Setup test database with accounts table",
+    "Use threading or asyncio for concurrent test execution"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "complex",
+    "estimated_fix_time": "45-60 minutes",
+    "requires_database": true,
+    "requires_concurrency": true
+  }
+}

@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  swe-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: swe-agent:latest
+    container_name: swe-agent-dev
+
+    # Docker-in-Docker: Mount Docker socket for sandbox management
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - swe-agent-data:/app/.swe-agent
+      - swe-agent-cache:/app/.cache
+
+    # Environment variables
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - SWE_AGENT_LOG_LEVEL=${SWE_AGENT_LOG_LEVEL:-INFO}
+      - SWE_AGENT_MAX_SESSIONS=${SWE_AGENT_MAX_SESSIONS:-100}
+      - SWE_AGENT_SESSION_TIMEOUT=${SWE_AGENT_SESSION_TIMEOUT:-7200}
+      - PYTHONUNBUFFERED=1
+
+    # Resource limits (production-like)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+
+    # Network configuration
+    networks:
+      - swe-agent-network
+
+    # Keep container running for development
+    command: tail -f /dev/null
+
+    # Restart policy
+    restart: unless-stopped
+
+  # Optional: Add a monitoring service for development
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: swe-agent-prometheus
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus-data:/prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   networks:
+  #     - swe-agent-network
+
+volumes:
+  swe-agent-data:
+    driver: local
+  swe-agent-cache:
+    driver: local
+  # prometheus-data:
+  #   driver: local
+
+networks:
+  swe-agent-network:
+    driver: bridge

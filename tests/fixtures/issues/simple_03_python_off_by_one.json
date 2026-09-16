@@ -1,0 +1,26 @@
+{
+  "issue_id": "simple-003",
+  "title": "IndexError: list index out of range in get_last_element",
+  "language": "python",
+  "complexity": "simple",
+  "body": "## Bug Description\n\nThe `get_last_element` function has an off-by-one error causing IndexError.\n\n## Error Message\n\n```\nIndexError: list index out of range\n```\n\n## Stack Trace\n\n```\nTraceback (most recent call last):\n  File \"src/list_utils.py\", line 22, in get_last_element\n    return items[len(items)]\nIndexError: list index out of range\n```\n\n## Steps to Reproduce\n\n1. Call `get_last_element([1, 2, 3])`\n2. Function tries to access `items[len(items)]` which is `items[3]`\n3. Valid indices are 0-2, so IndexError is raised\n\n## Expected Behavior\n\nShould return the last element (3) without error.\n\n## Actual Behavior\n\nRaises IndexError due to off-by-one error.\n\n## Additional Context\n\nThe correct index for the last element should be `len(items) - 1`.",
+  "repository": {
+    "type": "python",
+    "test_framework": "pytest",
+    "test_command": "pytest tests/test_list_utils.py::test_get_last_element -v"
+  },
+  "expected_fix": {
+    "file": "src/list_utils.py",
+    "description": "Change items[len(items)] to items[len(items) - 1]",
+    "validation": "Test should pass: test_get_last_element"
+  },
+  "setup_instructions": [
+    "Create src/list_utils.py with get_last_element function",
+    "Create tests/test_list_utils.py with test case"
+  ],
+  "metadata": {
+    "created_at": "2026-09-16",
+    "difficulty": "simple",
+    "estimated_fix_time": "1 minute"
+  }
+}
