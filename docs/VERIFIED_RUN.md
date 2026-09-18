@@ -34,6 +34,14 @@
 - 最终全量测试：`893 passed, 205 warnings in 447.97s`，无失败、无跳过。告警主要为旧 datetime API 和 pytest 收集提示。
 - 启动命令：`powershell -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 run examples/average-issue.json --output .swe-agent/demo-output`。
 
+## 清理后复验（2026-09-18）
+
+- 删除本地 13 个过时说明、重复 Issue 示例及临时脚本；保留正式源码、测试、配置和 `examples/average`。
+- 模型文档统一引用 `examples/average-issue.json`，补充 Ruff 缓存忽略规则。
+- 全量测试再次通过：`893 passed, 205 warnings in 448.51s`。
+- `run.ps1 --help`、Poetry wheel/sdist 构建通过；待提交文件及构建包未发现本地密钥或私有环境文件。
+- 真实 DeepSeek + Docker 流程再次成功，会话 `6ce3be40-063d-41bd-97c1-ec9e4f5262b5`；生成空列表返回 0 的补丁，`git apply --check` 通过，容器已清理。
+
 ## 已知边界
 
 这次验证证明 Python 示例修复流程可用，不代表任意 Issue 都能自动修好。

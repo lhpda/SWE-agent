@@ -23,7 +23,7 @@ export SWE_AGENT_LLM_PROVIDER="deepseek"
 export SWE_AGENT_LLM_MODEL="deepseek-chat"
 
 # 运行项目
-poetry run python -m swe_agent.cli run example_issue.json --verbose
+poetry run python -m swe_agent.cli run examples/average-issue.json --verbose
 ```
 
 ### 使用 OpenAI
@@ -37,7 +37,7 @@ export SWE_AGENT_LLM_PROVIDER="openai"
 export SWE_AGENT_LLM_MODEL="gpt-4"
 
 # 运行项目
-poetry run python -m swe_agent.cli run example_issue.json --verbose
+poetry run python -m swe_agent.cli run examples/average-issue.json --verbose
 ```
 
 ### 使用 Anthropic Claude（默认）
@@ -51,7 +51,7 @@ export SWE_AGENT_LLM_PROVIDER="anthropic"
 export SWE_AGENT_LLM_MODEL="claude-sonnet-4-20250514"
 
 # 运行项目
-poetry run python -m swe_agent.cli run example_issue.json --verbose
+poetry run python -m swe_agent.cli run examples/average-issue.json --verbose
 ```
 
 ## 配置文件方式
@@ -74,7 +74,7 @@ reproduction_timeout = 480
 使用配置文件运行：
 ```bash
 export DEEPSEEK_API_KEY="your-api-key"
-poetry run python -m swe_agent.cli run example_issue.json --config swe-agent.toml
+poetry run python -m swe_agent.cli run examples/average-issue.json --config swe-agent.toml
 ```
 
 ## DeepSeek 推荐模型

@@ -2,6 +2,8 @@
 
 Windows 用户请先阅读 [Windows 运行说明](WINDOWS_RUN.md)，使用 `run.ps1` 加载本地模型配置。
 
+运行示例统一放在 `examples/average-issue.json`；模型配置见 [LLM 配置说明](docs/LLM_PROVIDERS.md)，已验证能力与已知限制见 [验证记录](docs/VERIFIED_RUN.md)。
+
 An automated software engineering agent for bug fixing.
 
 ## Overview
