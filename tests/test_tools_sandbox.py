@@ -174,9 +174,7 @@ class TestRunTestTool:
         # Create temp dir with package.json
         with tempfile.TemporaryDirectory() as tmpdir:
             package_json = Path(tmpdir) / "package.json"
-            package_json.write_text(json.dumps({
-                "scripts": {"test": "jest"}
-            }))
+            package_json.write_text(json.dumps({"scripts": {"test": "jest"}}))
 
             tool = RunTestTool(sandbox=mock_sandbox, work_dir=tmpdir)
             framework = tool._detect_test_framework()

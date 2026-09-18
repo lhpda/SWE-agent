@@ -110,6 +110,11 @@ class StateStore:
         """
         return self.get_session_path(session_id).exists()
 
+    def load_state(self, session_id: str):
+        from swe_agent.orchestrator.pipeline import PipelineOrchestrator
+
+        return PipelineOrchestrator.resume(session_id, self).get_state()
+
     def save_stage_result(
         self,
         session_id: str,

@@ -59,6 +59,7 @@ logs/
 .env
 .env.local
 .env.*.local
+agent.env
 
 # Jupyter
 .ipynb_checkpoints/

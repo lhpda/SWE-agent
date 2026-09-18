@@ -10,7 +10,7 @@ Implements Task 3.1: Parse Issue Markdown and extract:
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.swe_agent.types import IssueContext
+from swe_agent.types import IssueContext
 
 
 class IssueParser:
@@ -49,9 +49,7 @@ class IssueParser:
         expected_behavior, actual_behavior = self.extract_expected_actual()
 
         # Assess quality/confidence for vague issues
-        quality, confidence = self._assess_quality(
-            error_messages, stack_traces, reproduction_steps
-        )
+        quality, confidence = self._assess_quality(error_messages, stack_traces, reproduction_steps)
 
         # Build parsed data dictionary
         self._parsed_data = {
@@ -126,9 +124,7 @@ class IssueParser:
         traces = []
 
         # Extract code blocks
-        code_blocks = re.findall(
-            r"```([\w]*)\n(.*?)```", self._raw_markdown, re.DOTALL
-        )
+        code_blocks = re.findall(r"```([\w]*)\n(.*?)```", self._raw_markdown, re.DOTALL)
 
         for lang_hint, block in code_blocks:
             trace_info = self._parse_stack_trace_block(block, lang_hint)
@@ -143,9 +139,7 @@ class IssueParser:
 
         return traces
 
-    def _parse_stack_trace_block(
-        self, text: str, lang_hint: str
-    ) -> Optional[Dict[str, Any]]:
+    def _parse_stack_trace_block(self, text: str, lang_hint: str) -> Optional[Dict[str, Any]]:
         """Parse a block of text to detect stack traces.
 
         Args:
@@ -217,7 +211,7 @@ class IssueParser:
             list_items = re.findall(
                 r"(?:^|\n)\s*(?:\d+\.|-|\*)\s+(.+?)(?=\n\s*(?:\d+\.|-|\*|\n|$))",
                 section_text,
-                re.DOTALL
+                re.DOTALL,
             )
             steps.extend([item.strip() for item in list_items if item.strip()])
 
@@ -230,18 +224,14 @@ class IssueParser:
         # Pattern 2: Look for numbered lists anywhere in the issue
         if not steps:
             numbered_lists = re.findall(
-                r"(?:^|\n)\s*\d+\.\s+(.+?)(?=\n\s*\d+\.|\n\n|\Z)",
-                text,
-                re.DOTALL
+                r"(?:^|\n)\s*\d+\.\s+(.+?)(?=\n\s*\d+\.|\n\n|\Z)", text, re.DOTALL
             )
             steps.extend([item.strip() for item in numbered_lists[:10] if item.strip()])
 
         # Pattern 3: Look for code blocks that might be reproduction examples
         if not steps:
             code_blocks = re.findall(
-                r"```(python|javascript|js|java|bash|sh)\n(.*?)```",
-                text,
-                re.DOTALL
+                r"```(python|javascript|js|java|bash|sh)\n(.*?)```", text, re.DOTALL
             )
             if code_blocks:
                 for lang, block in code_blocks[:3]:  # Limit to first 3
@@ -289,7 +279,9 @@ class IssueParser:
 
         # Pattern 2: "should be X but got Y" pattern
         if not expected or not actual:
-            should_but_pattern = r"should be\s+([^,]+),?\s+but\s+(?:got|received|returns?)\s+([^.\n]+)"
+            should_but_pattern = (
+                r"should be\s+([^,]+),?\s+but\s+(?:got|received|returns?)\s+([^.\n]+)"
+            )
             match = re.search(should_but_pattern, text, re.IGNORECASE)
             if match:
                 expected = match.group(1).strip()
@@ -300,7 +292,7 @@ class IssueParser:
             table_match = re.search(
                 r"\|\s*Expected\s*\|\s*Actual\s*\|.*?\n.*?\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|",
                 text,
-                re.IGNORECASE | re.DOTALL
+                re.IGNORECASE | re.DOTALL,
             )
             if table_match:
                 expected = table_match.group(1).strip()
@@ -309,10 +301,7 @@ class IssueParser:
         return expected, actual
 
     def _assess_quality(
-        self,
-        error_messages: List[str],
-        stack_traces: List[Dict],
-        reproduction_steps: List[str]
+        self, error_messages: List[str], stack_traces: List[Dict], reproduction_steps: List[str]
     ) -> Tuple[str, float]:
         """Assess the quality and confidence of the parsed Issue.
 

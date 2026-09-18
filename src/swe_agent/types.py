@@ -49,9 +49,7 @@ class RepositoryContext(BaseModel):
 class LocalizationResult(BaseModel):
     """Result from the Localization stage."""
 
-    status: Literal["success", "partial", "failed"] = Field(
-        ..., description="Localization status"
-    )
+    status: Literal["success", "partial", "failed"] = Field(..., description="Localization status")
     candidates: List[Dict[str, Any]] = Field(
         ..., description="Candidate files with confidence scores"
     )
@@ -71,9 +69,7 @@ class ReproductionResult(BaseModel):
     root_cause: Optional[Dict[str, Any]] = Field(
         None, description="Root cause information if reproduced"
     )
-    error_details: Optional[Dict[str, Any]] = Field(
-        None, description="Error details if reproduced"
-    )
+    error_details: Optional[Dict[str, Any]] = Field(None, description="Error details if reproduced")
     test_command: str = Field(..., description="Command used for reproduction")
     test_output: str = Field(..., description="Test execution output (truncated to 5KB)")
     execution_time: float = Field(..., description="Execution time in seconds")
@@ -86,12 +82,8 @@ class PatchResult(BaseModel):
     """Result from the Patch Generation stage."""
 
     status: Literal["generated", "failed"] = Field(..., description="Generation status")
-    patches: List[Dict[str, Any]] = Field(
-        ..., description="List of generated patch candidates"
-    )
-    generation_strategy: str = Field(
-        ..., description="Strategy used (single_fix or beam_search)"
-    )
+    patches: List[Dict[str, Any]] = Field(..., description="List of generated patch candidates")
+    generation_strategy: str = Field(..., description="Strategy used (single_fix or beam_search)")
     execution_time: float = Field(..., description="Execution time in seconds")
 
     model_config = {"extra": "forbid"}
@@ -100,9 +92,7 @@ class PatchResult(BaseModel):
 class ValidationResult(BaseModel):
     """Result from the Validation stage."""
 
-    status: Literal["passed", "failed", "error"] = Field(
-        ..., description="Validation status"
-    )
+    status: Literal["passed", "failed", "error"] = Field(..., description="Validation status")
     patch_id: str = Field(..., description="ID of the patch being validated")
     test_results: Dict[str, int] = Field(..., description="Test execution statistics")
     target_test_status: Literal["passed", "failed", "not_found"] = Field(
@@ -123,9 +113,9 @@ class ValidationResult(BaseModel):
 class ErrorInfo(BaseModel):
     """Information about an error that occurred."""
 
-    type: Literal[
-        "tool_error", "agent_error", "validation_error", "timeout", "resource_limit"
-    ] = Field(..., description="Error type")
+    type: Literal["tool_error", "agent_error", "validation_error", "timeout", "resource_limit"] = (
+        Field(..., description="Error type")
+    )
     message: str = Field(..., description="Error message")
     details: Dict[str, Any] = Field(..., description="Structured error details")
     recoverable: bool = Field(..., description="Whether the error is recoverable")
@@ -214,9 +204,7 @@ class PipelineResult(BaseModel):
     status: Literal["success", "failed"] = Field(..., description="Overall status")
     issue: IssueContext = Field(..., description="Original issue context")
     repository: RepositoryContext = Field(..., description="Repository context")
-    final_patch: Optional[Dict[str, Any]] = Field(
-        None, description="Final validated patch"
-    )
+    final_patch: Optional[Dict[str, Any]] = Field(None, description="Final validated patch")
     execution_summary: Dict[str, Any] = Field(..., description="Execution statistics")
     audit_log: str = Field(..., description="Path to execution log file")
     error: Optional[ErrorInfo] = Field(None, description="Error if failed")

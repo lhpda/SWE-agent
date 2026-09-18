@@ -137,6 +137,8 @@ class Config(BaseModel):
         description="Docker command execution timeout in seconds",
     )
 
+    docker_image: str = "swe-agent-sandbox:local"
+
     # ========================================================================
     # Storage Configuration (from Section 3.8)
     # ========================================================================
@@ -176,6 +178,11 @@ class Config(BaseModel):
     # LLM Configuration
     # ========================================================================
 
+    llm_provider: str = Field(
+        default="anthropic",
+        description="LLM provider (anthropic, deepseek, openai)",
+    )
+
     llm_model: str = Field(
         default="claude-sonnet-4-20250514",
         description="LLM model to use",
@@ -210,9 +217,14 @@ class Config(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    @field_validator("localization_timeout", "reproduction_timeout",
-                     "patch_generation_timeout", "validation_timeout",
-                     "global_timeout", "docker_timeout")
+    @field_validator(
+        "localization_timeout",
+        "reproduction_timeout",
+        "patch_generation_timeout",
+        "validation_timeout",
+        "global_timeout",
+        "docker_timeout",
+    )
     @classmethod
     def validate_positive_timeout(cls, v: int) -> int:
         """Validate that timeout values are positive."""
@@ -220,9 +232,13 @@ class Config(BaseModel):
             raise ValueError(f"Timeout must be positive, got {v}")
         return v
 
-    @field_validator("max_retries", "localization_max_retries",
-                     "reproduction_max_retries", "patch_max_retries",
-                     "validation_max_retries")
+    @field_validator(
+        "max_retries",
+        "localization_max_retries",
+        "reproduction_max_retries",
+        "patch_max_retries",
+        "validation_max_retries",
+    )
     @classmethod
     def validate_non_negative_retries(cls, v: int) -> int:
         """Validate that retry values are non-negative."""
@@ -230,8 +246,9 @@ class Config(BaseModel):
             raise ValueError(f"Retries must be non-negative, got {v}")
         return v
 
-    @field_validator("max_tool_output_size", "max_test_output_size",
-                     "max_file_size", "max_session_size")
+    @field_validator(
+        "max_tool_output_size", "max_test_output_size", "max_file_size", "max_session_size"
+    )
     @classmethod
     def validate_positive_size(cls, v: int) -> int:
         """Validate that size limits are positive."""
@@ -257,9 +274,10 @@ def load_config(config_file: Optional[str] = None) -> Config:
     # Load from file if provided
     if config_file and Path(config_file).exists():
         try:
-            import tomli
+            import tomllib
+
             with open(config_file, "rb") as f:
-                file_config = tomli.load(f)
+                file_config = tomllib.load(f)
                 config_dict.update(file_config.get("swe_agent", {}))
         except ImportError:
             # tomli not available, skip file loading
@@ -287,11 +305,13 @@ def load_config(config_file: Optional[str] = None) -> Config:
         "SWE_AGENT_DOCKER_CPU_LIMIT": "docker_cpu_limit",
         "SWE_AGENT_DOCKER_MEMORY_LIMIT": "docker_memory_limit",
         "SWE_AGENT_DOCKER_TIMEOUT": "docker_timeout",
+        "SWE_AGENT_DOCKER_IMAGE": "docker_image",
         "SWE_AGENT_STORAGE_BASE_PATH": "storage_base_path",
         "SWE_AGENT_MAX_SESSION_SIZE": "max_session_size",
         "SWE_AGENT_MAX_SESSIONS": "max_sessions",
         "SWE_AGENT_LOG_LEVEL": "log_level",
         "SWE_AGENT_LOG_FORMAT": "log_format",
+        "SWE_AGENT_LLM_PROVIDER": "llm_provider",
         "SWE_AGENT_LLM_MODEL": "llm_model",
         "SWE_AGENT_LLM_MAX_TOKENS": "llm_max_tokens",
         "SWE_AGENT_LLM_TEMPERATURE": "llm_temperature",
@@ -307,7 +327,9 @@ def load_config(config_file: Optional[str] = None) -> Config:
                 field_type = field_info.annotation
 
                 # Convert based on type
-                if field_type == int or (hasattr(field_type, "__origin__") and int in getattr(field_type, "__args__", [])):
+                if field_type == int or (
+                    hasattr(field_type, "__origin__") and int in getattr(field_type, "__args__", [])
+                ):
                     config_dict[field_name] = int(value)
                 elif field_type == float:
                     config_dict[field_name] = float(value)

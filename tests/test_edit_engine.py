@@ -3,6 +3,7 @@ Tests for CodeEditEngine - code editing and manipulation engine.
 
 Following TDD: These tests are written BEFORE implementation.
 """
+
 import pytest
 import tempfile
 import os
@@ -20,6 +21,7 @@ class TestCodeEditEngineBasics:
     def engine(self):
         """Create a CodeEditEngine instance."""
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     @pytest.fixture
@@ -48,6 +50,7 @@ class TestInsertOperations:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     @pytest.fixture
@@ -67,12 +70,12 @@ line3
             "type": "insert",
             "file_path": temp_file,
             "start_line": 0,
-            "content": "# Header comment\n"
+            "content": "# Header comment\n",
         }
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             lines = f.readlines()
         assert lines[0] == "# Header comment\n"
         assert lines[1] == "line1\n"
@@ -83,30 +86,30 @@ line3
             "type": "insert",
             "file_path": temp_file,
             "start_line": 2,
-            "content": "inserted_line\n"
+            "content": "inserted_line\n",
         }
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             lines = f.readlines()
         assert "inserted_line\n" in lines
 
     def test_insert_at_end(self, engine, temp_file):
         """Test inserting code at the end of file."""
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             original_lines = f.readlines()
 
         edit_op = {
             "type": "insert",
             "file_path": temp_file,
             "start_line": len(original_lines),
-            "content": "last_line\n"
+            "content": "last_line\n",
         }
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             lines = f.readlines()
         assert lines[-1] == "last_line\n"
 
@@ -116,12 +119,12 @@ line3
             "type": "insert",
             "file_path": temp_file,
             "start_line": 1,
-            "content": "new_line1\nnew_line2\nnew_line3\n"
+            "content": "new_line1\nnew_line2\nnew_line3\n",
         }
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             content = f.read()
         assert "new_line1" in content
         assert "new_line2" in content
@@ -134,6 +137,7 @@ class TestReplaceOperations:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     @pytest.fixture
@@ -157,12 +161,12 @@ def keep_function():
             "file_path": temp_python_file,
             "start_line": 2,
             "end_line": 2,
-            "content": '    print("New")\n'
+            "content": '    print("New")\n',
         }
         result = engine.apply_edit(temp_python_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_python_file, 'r') as f:
+        with open(temp_python_file, "r") as f:
             content = f.read()
         assert 'print("New")' in content
         assert 'print("Old")' not in content
@@ -177,12 +181,12 @@ def keep_function():
             "content": """def new_function():
     print("Replaced")
     return 99
-"""
+""",
         }
         result = engine.apply_edit(temp_python_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_python_file, 'r') as f:
+        with open(temp_python_file, "r") as f:
             content = f.read()
         assert "new_function" in content
         assert "old_function" not in content
@@ -206,13 +210,13 @@ def keep_function():
             "file_path": str(file_path),
             "start_line": 2,
             "end_line": 3,
-            "content": ""
+            "content": "",
         }
         result = engine.apply_edit(str(file_path), edit_op)
         assert result["success"] is True
 
         # Verify the comments were removed
-        with open(str(file_path), 'r') as f:
+        with open(str(file_path), "r") as f:
             content = f.read()
         assert "Comment line 1" in content
         assert "Comment line 2" not in content
@@ -226,6 +230,7 @@ class TestDeleteOperations:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     @pytest.fixture
@@ -242,16 +247,11 @@ line5
 
     def test_delete_single_line(self, engine, temp_file):
         """Test deleting a single line."""
-        edit_op = {
-            "type": "delete",
-            "file_path": temp_file,
-            "start_line": 2,
-            "end_line": 2
-        }
+        edit_op = {"type": "delete", "file_path": temp_file, "start_line": 2, "end_line": 2}
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             content = f.read()
         assert "line2" not in content
         assert "line1" in content
@@ -259,16 +259,11 @@ line5
 
     def test_delete_multiple_lines(self, engine, temp_file):
         """Test deleting multiple consecutive lines."""
-        edit_op = {
-            "type": "delete",
-            "file_path": temp_file,
-            "start_line": 2,
-            "end_line": 4
-        }
+        edit_op = {"type": "delete", "file_path": temp_file, "start_line": 2, "end_line": 4}
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             content = f.read()
         assert "line2" not in content
         assert "line3" not in content
@@ -278,16 +273,11 @@ line5
 
     def test_delete_first_line(self, engine, temp_file):
         """Test deleting the first line."""
-        edit_op = {
-            "type": "delete",
-            "file_path": temp_file,
-            "start_line": 1,
-            "end_line": 1
-        }
+        edit_op = {"type": "delete", "file_path": temp_file, "start_line": 1, "end_line": 1}
         result = engine.apply_edit(temp_file, edit_op)
         assert result["success"] is True
 
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             lines = f.readlines()
         assert lines[0] == "line2\n"
 
@@ -298,6 +288,7 @@ class TestSyntaxValidation:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     def test_validate_valid_python_syntax(self, engine):
@@ -341,7 +332,7 @@ x = 1
             "type": "insert",
             "file_path": str(file_path),
             "start_line": 2,
-            "content": "    return x +\n"  # Incomplete expression
+            "content": "    return x +\n",  # Incomplete expression
         }
         result = engine.apply_edit(str(file_path), edit_op)
         assert result["success"] is False
@@ -354,6 +345,7 @@ class TestDiffGeneration:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     def test_generate_diff_basic(self, engine):
@@ -401,6 +393,7 @@ class TestRollbackFunctionality:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     @pytest.fixture
@@ -415,7 +408,7 @@ original_line2
     def test_rollback_after_edit(self, engine, temp_file):
         """Test rollback restores original content."""
         # Read original
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             original = f.read()
 
         # Apply edit
@@ -424,12 +417,12 @@ original_line2
             "file_path": temp_file,
             "start_line": 1,
             "end_line": 1,
-            "content": "modified_line1\n"
+            "content": "modified_line1\n",
         }
         engine.apply_edit(temp_file, edit_op)
 
         # Verify it changed
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             modified = f.read()
         assert modified != original
 
@@ -438,7 +431,7 @@ original_line2
         assert rollback_result["success"] is True
 
         # Verify restored
-        with open(temp_file, 'r') as f:
+        with open(temp_file, "r") as f:
             restored = f.read()
         assert restored == original
 
@@ -455,6 +448,7 @@ class TestErrorHandling:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     def test_apply_edit_nonexistent_file(self, engine):
@@ -463,7 +457,7 @@ class TestErrorHandling:
             "type": "insert",
             "file_path": "/nonexistent/path/file.py",
             "start_line": 1,
-            "content": "test\n"
+            "content": "test\n",
         }
         result = engine.apply_edit("/nonexistent/path/file.py", edit_op)
         assert result["success"] is False
@@ -473,11 +467,7 @@ class TestErrorHandling:
         file_path = tmp_path / "test.py"
         file_path.write_text("content\n")
 
-        edit_op = {
-            "type": "invalid_type",
-            "file_path": str(file_path),
-            "start_line": 1
-        }
+        edit_op = {"type": "invalid_type", "file_path": str(file_path), "start_line": 1}
         result = engine.apply_edit(str(file_path), edit_op)
         assert result["success"] is False
 
@@ -490,7 +480,7 @@ class TestErrorHandling:
             "type": "delete",
             "file_path": str(file_path),
             "start_line": 10,  # Beyond file length
-            "end_line": 20
+            "end_line": 20,
         }
         result = engine.apply_edit(str(file_path), edit_op)
         assert result["success"] is False
@@ -502,6 +492,7 @@ class TestIntegrationScenarios:
     @pytest.fixture
     def engine(self):
         from swe_agent.agents.patch.edit_engine import CodeEditEngine
+
         return CodeEditEngine()
 
     def test_multiple_sequential_edits(self, engine, tmp_path):
@@ -520,7 +511,7 @@ def func2():
             "type": "insert",
             "file_path": str(file_path),
             "start_line": 0,
-            "content": "# Header\n"
+            "content": "# Header\n",
         }
         result1 = engine.apply_edit(str(file_path), edit1)
         assert result1["success"] is True
@@ -531,13 +522,13 @@ def func2():
             "file_path": str(file_path),
             "start_line": 2,
             "end_line": 2,
-            "content": "def func1_renamed():\n"
+            "content": "def func1_renamed():\n",
         }
         result2 = engine.apply_edit(str(file_path), edit2)
         assert result2["success"] is True
 
         # Verify final result
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             final = f.read()
         assert "# Header" in final
         assert "func1_renamed" in final

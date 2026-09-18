@@ -113,18 +113,21 @@ class TestE2ESimpleBugs:
 class TestE2EFixtureValidation:
     """Validation tests for all test fixtures."""
 
-    @pytest.mark.parametrize("fixture_file", [
-        "simple_01_python_division_by_zero.json",
-        "simple_02_js_null_reference.json",
-        "simple_03_python_off_by_one.json",
-        "medium_01_python_async_race_condition.json",
-        "medium_02_js_memory_leak.json",
-        "medium_03_python_sql_injection.json",
-        "medium_04_js_promise_unhandled_rejection.json",
-        "complex_01_python_deadlock.json",
-        "complex_02_js_jwt_vulnerability.json",
-        "negative_01_vague_performance.json",
-    ])
+    @pytest.mark.parametrize(
+        "fixture_file",
+        [
+            "simple_01_python_division_by_zero.json",
+            "simple_02_js_null_reference.json",
+            "simple_03_python_off_by_one.json",
+            "medium_01_python_async_race_condition.json",
+            "medium_02_js_memory_leak.json",
+            "medium_03_python_sql_injection.json",
+            "medium_04_js_promise_unhandled_rejection.json",
+            "complex_01_python_deadlock.json",
+            "complex_02_js_jwt_vulnerability.json",
+            "negative_01_vague_performance.json",
+        ],
+    )
     def test_fixture_structure_valid(self, fixture_file: str):
         """Verify all fixture files have required structure."""
         issue = load_issue_fixture(fixture_file)
@@ -208,9 +211,7 @@ class TestE2EMockPipeline:
         # from swe_agent.orchestrator.pipeline import PipelineOrchestrator
         mock = Mock()
         mock.run.return_value = Mock(
-            status="success",
-            patch="mock patch content",
-            session_id="test-session"
+            status="success", patch="mock patch content", session_id="test-session"
         )
         return mock
 
@@ -239,7 +240,7 @@ class TestE2EMockPipeline:
         mock_orchestrator.run.return_value = Mock(
             status="failed",
             error="Insufficient information to localize issue",
-            session_id="test-session"
+            session_id="test-session",
         )
 
         # Load negative test case

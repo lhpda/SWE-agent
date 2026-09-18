@@ -83,14 +83,23 @@ def temp_git_repo(temp_work_dir):
 
     # Initialize git repo
     subprocess.run(["git", "init"], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Test"], cwd=repo_path, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=repo_path,
+        check=True,
+        capture_output=True,
+    )
 
     # Create initial commit
     test_file = repo_path / "test.txt"
     test_file.write_text("initial content")
     subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"], cwd=repo_path, check=True, capture_output=True
+    )
 
     yield str(repo_path)
 
@@ -134,15 +143,17 @@ class TestSnapshotCreation:
         assert snapshot_manager.snapshots[0]["id"] == snapshot_id
         assert snapshot_manager.snapshots[0]["tag"] == "test-snapshot"
 
-    def test_create_snapshot_naming_convention(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_create_snapshot_naming_convention(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test snapshot follows naming convention."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
         snapshot_id = snapshot_manager.create_snapshot()
 
         # Snapshot name should be: swe-agent-snapshot-{session_id}-{timestamp}
-        assert "swe-agent-snapshot" in snapshot_id
-        assert "snapshot-test-123" in snapshot_id
+        assert "swe-agent-snapshot" in snapshot_manager.get_snapshot_info(snapshot_id)["name"]
+        assert "snapshot-test-123" in snapshot_manager.get_snapshot_info(snapshot_id)["name"]
 
     def test_create_snapshot_with_custom_tag(self, snapshot_manager, docker_sandbox, temp_work_dir):
         """Test creating snapshot with custom tag."""
@@ -171,7 +182,9 @@ class TestSnapshotCreation:
         with pytest.raises(Exception):
             snapshot_manager.create_snapshot()
 
-    def test_create_snapshot_records_timestamp(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_create_snapshot_records_timestamp(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test snapshot records creation timestamp."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
@@ -241,7 +254,9 @@ class TestSnapshotRestore:
         with pytest.raises(Exception):
             snapshot_manager.restore_snapshot("nonexistent-snapshot-id")
 
-    def test_restore_snapshot_updates_container_id(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_restore_snapshot_updates_container_id(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test restore updates sandbox container_id."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
         original_container_id = docker_sandbox.container_id
@@ -310,7 +325,8 @@ class TestGitBackup:
         stash_id = snapshot_manager.create_git_backup("/fake/path")
 
         assert stash_id is not None
-        assert "swe-agent-backup" in stash_id
+        assert stash_id == "stash@{0}"
+        assert "swe-agent-backup" in str(mock_run.call_args_list)
         mock_run.assert_called()
 
     @patch("subprocess.run")
@@ -347,7 +363,8 @@ class TestGitBackup:
         stash_id = snapshot_manager.create_git_backup("/fake/path")
 
         # Should contain: swe-agent-backup-{timestamp}
-        assert "swe-agent-backup-" in stash_id
+        assert stash_id == "stash@{0}"
+        assert "swe-agent-backup-" in str(mock_run.call_args_list)
 
     @patch("subprocess.run")
     def test_git_backup_no_changes(self, mock_run, snapshot_manager, temp_git_repo):
@@ -378,10 +395,7 @@ class TestAutoRollback:
         docker_sandbox.execute("echo 'bad' > /tmp/state.txt", timeout=5)
 
         # Trigger auto rollback
-        success = snapshot_manager.auto_rollback_trigger(
-            snapshot_id=snapshot_id,
-            condition="error"
-        )
+        success = snapshot_manager.auto_rollback_trigger(snapshot_id=snapshot_id, condition="error")
 
         assert success is True
 
@@ -389,7 +403,9 @@ class TestAutoRollback:
         result = docker_sandbox.execute("cat /tmp/state.txt", timeout=5)
         assert "good" in result["stdout"]
 
-    def test_auto_rollback_trigger_on_test_failure(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_auto_rollback_trigger_on_test_failure(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test auto rollback on test failure."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
@@ -397,8 +413,7 @@ class TestAutoRollback:
 
         # Simulate test failure condition
         success = snapshot_manager.auto_rollback_trigger(
-            snapshot_id=snapshot_id,
-            condition="test_failure"
+            snapshot_id=snapshot_id, condition="test_failure"
         )
 
         assert success is True
@@ -408,10 +423,7 @@ class TestAutoRollback:
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
         with pytest.raises(Exception):
-            snapshot_manager.auto_rollback_trigger(
-                snapshot_id="nonexistent",
-                condition="error"
-            )
+            snapshot_manager.auto_rollback_trigger(snapshot_id="nonexistent", condition="error")
 
 
 class TestSnapshotManagement:
@@ -493,11 +505,15 @@ class TestSnapshotErrorHandling:
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
         # Simulate Docker API error
-        with patch.object(docker_sandbox.client.api, "commit", side_effect=Exception("Docker error")):
+        with patch.object(
+            docker_sandbox.client.api, "commit", side_effect=Exception("Docker error")
+        ):
             with pytest.raises(Exception):
                 snapshot_manager.create_snapshot()
 
-    def test_restore_snapshot_after_container_destroyed(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_restore_snapshot_after_container_destroyed(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test restore fails gracefully if container destroyed."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
         snapshot_id = snapshot_manager.create_snapshot()
@@ -518,7 +534,9 @@ class TestSnapshotErrorHandling:
 class TestSnapshotIntegration:
     """Test snapshot integration with DockerSandbox."""
 
-    def test_snapshot_preserves_file_permissions(self, snapshot_manager, docker_sandbox, temp_work_dir):
+    def test_snapshot_preserves_file_permissions(
+        self, snapshot_manager, docker_sandbox, temp_work_dir
+    ):
         """Test snapshot preserves file permissions."""
         docker_sandbox.create(image="python:3.11-slim", work_dir=temp_work_dir)
 
@@ -535,8 +553,8 @@ class TestSnapshotIntegration:
         snapshot_manager.restore_snapshot(snapshot_id)
 
         # Verify permissions restored
-        result = docker_sandbox.execute("test -x /tmp/exec.sh && echo 'executable'", timeout=5)
-        assert "executable" in result["stdout"]
+        result = docker_sandbox.execute("stat -c %a /tmp/exec.sh", timeout=5)
+        assert result["stdout"].strip() == "755"
 
     def test_snapshot_with_network_state(self, snapshot_manager, docker_sandbox, temp_work_dir):
         """Test snapshot handles container network state."""

@@ -147,7 +147,7 @@ class TestStackTraceStrategy:
 class TestErrorMessageStrategy:
     """Tests for ErrorMessageStrategy."""
 
-    @patch('src.swe_agent.agents.localization.strategy.RipgrepSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.RipgrepSearchTool")
     def test_search_with_function_name_keyword(self, mock_tool_class):
         """Test keyword search extracts and searches for function names."""
         mock_tool = Mock()
@@ -179,7 +179,7 @@ class TestErrorMessageStrategy:
         assert "src/utils.py" in results[0].file_path
         assert results[0].confidence > 0.5
 
-    @patch('src.swe_agent.agents.localization.strategy.RipgrepSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.RipgrepSearchTool")
     def test_keyword_extraction_from_error(self, mock_tool_class):
         """Test extraction of keywords from error messages."""
         mock_tool = Mock()
@@ -205,7 +205,7 @@ class TestErrorMessageStrategy:
         call_args = mock_tool.execute.call_args[1]
         assert "calculate_total" in call_args["pattern"]
 
-    @patch('src.swe_agent.agents.localization.strategy.RipgrepSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.RipgrepSearchTool")
     def test_search_ranks_by_relevance(self, mock_tool_class):
         """Test that keyword search results are ranked by relevance."""
         mock_tool = Mock()
@@ -233,7 +233,7 @@ class TestErrorMessageStrategy:
         assert results[0].file_path == "src/core.py"
         assert results[0].confidence > results[1].confidence
 
-    @patch('src.swe_agent.agents.localization.strategy.RipgrepSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.RipgrepSearchTool")
     def test_search_without_error_messages(self, mock_tool_class):
         """Test that empty list is returned when no error messages."""
         strategy = ErrorMessageStrategy()
@@ -247,7 +247,7 @@ class TestErrorMessageStrategy:
 
         assert results == []
 
-    @patch('src.swe_agent.agents.localization.strategy.RipgrepSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.RipgrepSearchTool")
     def test_handles_ripgrep_errors(self, mock_tool_class):
         """Test handling of ripgrep tool errors."""
         mock_tool = Mock()
@@ -274,7 +274,7 @@ class TestErrorMessageStrategy:
 class TestSymbolSearchStrategy:
     """Tests for SymbolSearchStrategy."""
 
-    @patch('src.swe_agent.agents.localization.strategy.SymbolSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.SymbolSearchTool")
     def test_search_locates_function(self, mock_tool_class):
         """Test that symbol search locates specific functions."""
         mock_tool = Mock()
@@ -306,7 +306,7 @@ class TestSymbolSearchStrategy:
         assert results[0].line_number == 25
         assert "add_numbers" in results[0].relevant_symbols
 
-    @patch('src.swe_agent.agents.localization.strategy.SymbolSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.SymbolSearchTool")
     def test_search_locates_class(self, mock_tool_class):
         """Test that symbol search locates classes."""
         mock_tool = Mock()
@@ -332,7 +332,7 @@ class TestSymbolSearchStrategy:
         assert results[0].confidence > 0.7
         assert "class" in results[0].reason.lower()
 
-    @patch('src.swe_agent.agents.localization.strategy.SymbolSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.SymbolSearchTool")
     def test_extracts_multiple_symbols(self, mock_tool_class):
         """Test extraction of multiple symbols from error message."""
         mock_tool = Mock()
@@ -373,7 +373,7 @@ class TestSymbolSearchStrategy:
         assert "src/validators.py" in file_paths
         assert "src/processor.py" in file_paths
 
-    @patch('src.swe_agent.agents.localization.strategy.SymbolSearchTool')
+    @patch("src.swe_agent.agents.localization.strategy.SymbolSearchTool")
     def test_no_symbols_found(self, mock_tool_class):
         """Test when no symbols can be extracted."""
         strategy = SymbolSearchStrategy()

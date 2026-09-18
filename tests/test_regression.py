@@ -39,7 +39,13 @@ class TestDetectNewFailures:
         """Test detecting a single new failure."""
         detector = RegressionDetector()
         before = {"passed": 3, "failed": 0, "skipped": 0, "total": 3, "failed_tests": []}
-        after = {"passed": 2, "failed": 1, "skipped": 0, "total": 3, "failed_tests": ["test_example.py::test_one"]}
+        after = {
+            "passed": 2,
+            "failed": 1,
+            "skipped": 0,
+            "total": 3,
+            "failed_tests": ["test_example.py::test_one"],
+        }
 
         new_failures = detector.detect_new_failures(before, after)
 
@@ -55,7 +61,7 @@ class TestDetectNewFailures:
             "failed": 3,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"],
         }
 
         new_failures = detector.detect_new_failures(before, after)
@@ -73,14 +79,14 @@ class TestDetectNewFailures:
             "failed": 1,
             "skipped": 0,
             "total": 3,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
         after = {
             "passed": 2,
             "failed": 1,
             "skipped": 0,
             "total": 3,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
 
         new_failures = detector.detect_new_failures(before, after)
@@ -95,14 +101,14 @@ class TestDetectNewFailures:
             "failed": 1,
             "skipped": 0,
             "total": 4,
-            "failed_tests": ["test_old.py::test_broken"]
+            "failed_tests": ["test_old.py::test_broken"],
         }
         after = {
             "passed": 2,
             "failed": 2,
             "skipped": 0,
             "total": 4,
-            "failed_tests": ["test_old.py::test_broken", "test_new.py::test_regression"]
+            "failed_tests": ["test_old.py::test_broken", "test_new.py::test_regression"],
         }
 
         new_failures = detector.detect_new_failures(before, after)
@@ -123,7 +129,7 @@ class TestDetectFixedTests:
             "failed": 1,
             "skipped": 0,
             "total": 3,
-            "failed_tests": ["test_example.py::test_was_broken"]
+            "failed_tests": ["test_example.py::test_was_broken"],
         }
         after = {"passed": 3, "failed": 0, "skipped": 0, "total": 3, "failed_tests": []}
 
@@ -140,7 +146,7 @@ class TestDetectFixedTests:
             "failed": 3,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"],
         }
         after = {"passed": 5, "failed": 0, "skipped": 0, "total": 5, "failed_tests": []}
 
@@ -159,14 +165,14 @@ class TestDetectFixedTests:
             "failed": 1,
             "skipped": 0,
             "total": 3,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
         after = {
             "passed": 2,
             "failed": 1,
             "skipped": 0,
             "total": 3,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
 
         fixed_tests = detector.detect_fixed_tests(before, after)
@@ -181,14 +187,14 @@ class TestDetectFixedTests:
             "failed": 3,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two", "test_c.py::test_three"],
         }
         after = {
             "passed": 4,
             "failed": 1,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_b.py::test_two"]
+            "failed_tests": ["test_b.py::test_two"],
         }
 
         fixed_tests = detector.detect_fixed_tests(before, after)
@@ -211,7 +217,7 @@ class TestIsRegression:
             "failed": 1,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_example.py::test_new_failure"]
+            "failed_tests": ["test_example.py::test_new_failure"],
         }
 
         is_regression = detector.is_regression(before, after)
@@ -226,7 +232,7 @@ class TestIsRegression:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"],
         }
         after = {"passed": 5, "failed": 0, "skipped": 0, "total": 5, "failed_tests": []}
 
@@ -242,14 +248,14 @@ class TestIsRegression:
             "failed": 1,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
         after = {
             "passed": 4,
             "failed": 1,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_example.py::test_broken"]
+            "failed_tests": ["test_example.py::test_broken"],
         }
 
         is_regression = detector.is_regression(before, after)
@@ -264,14 +270,14 @@ class TestIsRegression:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_old1.py::test_broken", "test_old2.py::test_broken"]
+            "failed_tests": ["test_old1.py::test_broken", "test_old2.py::test_broken"],
         }
         after = {
             "passed": 3,
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_old1.py::test_broken", "test_new.py::test_regression"]
+            "failed_tests": ["test_old1.py::test_broken", "test_new.py::test_regression"],
         }
 
         is_regression = detector.is_regression(before, after)
@@ -291,7 +297,7 @@ class TestCompareResults:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"],
         }
 
         result = detector.compare_results(before, after)
@@ -312,7 +318,7 @@ class TestCompareResults:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"],
         }
         after = {"passed": 5, "failed": 0, "skipped": 0, "total": 5, "failed_tests": []}
 
@@ -334,14 +340,14 @@ class TestCompareResults:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"],
         }
         after = {
             "passed": 3,
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"]
+            "failed_tests": ["test_a.py::test_one", "test_b.py::test_two"],
         }
 
         result = detector.compare_results(before, after)
@@ -362,14 +368,14 @@ class TestCompareResults:
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_old1.py::test_broken", "test_old2.py::test_broken"]
+            "failed_tests": ["test_old1.py::test_broken", "test_old2.py::test_broken"],
         }
         after = {
             "passed": 3,
             "failed": 2,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_old1.py::test_broken", "test_new.py::test_regression"]
+            "failed_tests": ["test_old1.py::test_broken", "test_new.py::test_regression"],
         }
 
         result = detector.compare_results(before, after)
@@ -405,14 +411,14 @@ class TestCompareResults:
             "failed": 5,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_1", "test_2", "test_3", "test_4", "test_5"]
+            "failed_tests": ["test_1", "test_2", "test_3", "test_4", "test_5"],
         }
         after = {
             "passed": 0,
             "failed": 5,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_1", "test_2", "test_3", "test_4", "test_5"]
+            "failed_tests": ["test_1", "test_2", "test_3", "test_4", "test_5"],
         }
 
         result = detector.compare_results(before, after)
@@ -431,15 +437,9 @@ class TestCompareResults:
             "failed": 3,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_1", "test_2", "test_3"]
+            "failed_tests": ["test_1", "test_2", "test_3"],
         }
-        after = {
-            "passed": 4,
-            "failed": 1,
-            "skipped": 0,
-            "total": 5,
-            "failed_tests": ["test_4"]
-        }
+        after = {"passed": 4, "failed": 1, "skipped": 0, "total": 5, "failed_tests": ["test_4"]}
 
         result = detector.compare_results(before, after)
 
@@ -452,19 +452,13 @@ class TestCompareResults:
     def test_compare_with_negative_net_change(self):
         """Test net change calculation when more tests break than are fixed."""
         detector = RegressionDetector()
-        before = {
-            "passed": 4,
-            "failed": 1,
-            "skipped": 0,
-            "total": 5,
-            "failed_tests": ["test_1"]
-        }
+        before = {"passed": 4, "failed": 1, "skipped": 0, "total": 5, "failed_tests": ["test_1"]}
         after = {
             "passed": 2,
             "failed": 3,
             "skipped": 0,
             "total": 5,
-            "failed_tests": ["test_2", "test_3", "test_4"]
+            "failed_tests": ["test_2", "test_3", "test_4"],
         }
 
         result = detector.compare_results(before, after)

@@ -1,5 +1,7 @@
 # SWE Agent
 
+Windows 用户请先阅读 [Windows 运行说明](WINDOWS_RUN.md)，使用 `run.ps1` 加载本地模型配置。
+
 An automated software engineering agent for bug fixing.
 
 ## Overview

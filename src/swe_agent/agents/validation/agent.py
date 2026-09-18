@@ -11,6 +11,8 @@ Orchestrates the validation workflow:
 """
 
 import time
+import ast
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 from .applicator import PatchApplicator
@@ -42,6 +44,7 @@ class ValidationAgent:
         self.patch_result = patch_result
         self.sandbox = sandbox
         self.repo_context = repo_context
+        self._original_files = {}
 
         # Initialize components
         self.applicator = PatchApplicator()
@@ -73,7 +76,7 @@ class ValidationAgent:
             return self._error_result("No patches provided", start_time)
 
         patch = patches[0]
-        patch_id = patch.get("id", "unknown")
+        patch_id = patch.get("patch_id", patch.get("id", "unknown"))
 
         result = {
             "status": "error",
@@ -83,7 +86,7 @@ class ValidationAgent:
             "target_test_status": "not_found",
             "regression_check": {},
             "test_output": "",
-            "execution_time": 0.0
+            "execution_time": 0.0,
         }
 
         try:
@@ -96,7 +99,9 @@ class ValidationAgent:
 
             if not apply_result.get("success", False):
                 result["status"] = "error"
-                result["test_output"] = f"Patch application failed: {apply_result.get('error', 'Unknown error')}"
+                result["test_output"] = (
+                    f"Patch application failed: {apply_result.get('error', 'Unknown error')}"
+                )
                 result["execution_time"] = time.time() - start_time
                 return result
 
@@ -113,25 +118,34 @@ class ValidationAgent:
             )
 
             # Step 6: Determine overall status
-            if regression_info["is_regression"]:
+            if (
+                regression_info["is_regression"]
+                or tests_after.get("exit_code", 0) != 0
+                or tests_after.get("timed_out", False)
+                or tests_after.get("total", 0) == 0
+                or tests_after.get("failed", 0) > 0
+                or target_test_status == "failed"
+            ):
                 status = "failed"
             else:
                 status = "passed"
 
             # Build result
-            result.update({
-                "status": status,
-                "test_results": {
-                    "passed": tests_after.get("passed", 0),
-                    "failed": tests_after.get("failed", 0),
-                    "skipped": tests_after.get("skipped", 0),
-                    "total": tests_after.get("total", 0)
-                },
-                "target_test_status": target_test_status,
-                "regression_check": regression_info,
-                "test_output": tests_after.get("output", "")[:10240],  # Truncate to 10KB
-                "execution_time": time.time() - start_time
-            })
+            result.update(
+                {
+                    "status": status,
+                    "test_results": {
+                        "passed": tests_after.get("passed", 0),
+                        "failed": tests_after.get("failed", 0),
+                        "skipped": tests_after.get("skipped", 0),
+                        "total": tests_after.get("total", 0),
+                    },
+                    "target_test_status": target_test_status,
+                    "regression_check": regression_info,
+                    "test_output": tests_after.get("output", "")[:10240],  # Truncate to 10KB
+                    "execution_time": time.time() - start_time,
+                }
+            )
 
             return result
 
@@ -140,6 +154,13 @@ class ValidationAgent:
             result["test_output"] = f"Validation error: {str(e)}"
             result["execution_time"] = time.time() - start_time
             return result
+
+        finally:
+            # Validation never leaves a rejected/accepted candidate installed.
+            # The caller receives a diff; each next candidate starts from the baseline.
+            for path, original in self._original_files.items():
+                path.write_bytes(original)
+            self._original_files.clear()
 
     def _apply_patch(self, patch: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -151,13 +172,25 @@ class ValidationAgent:
         Returns:
             Application result dict
         """
+        if "modified_code" in patch:
+            root = Path(self.repo_context["path"]).resolve()
+            path = (root / patch["file_path"]).resolve()
+            if not path.is_relative_to(root):
+                return {"success": False, "applied": False, "error": "Patch escapes repository"}
+            original = path.read_bytes()
+            if path.read_text(encoding="utf-8") != patch["original_code"]:
+                return {"success": False, "applied": False, "error": "Patch baseline changed"}
+            if path.suffix == ".py":
+                ast.parse(patch["modified_code"])
+            self._original_files[path] = original
+            path.write_text(patch["modified_code"], encoding="utf-8", newline="")
+            return {"success": True, "applied": True}
+
         file_path = patch.get("file", "")
         patch_content = patch.get("content", {})
 
         return self.applicator.apply_patch(
-            patch_content=patch_content,
-            file_path=file_path,
-            sandbox=self.sandbox
+            patch_content=patch_content, file_path=file_path, sandbox=self.sandbox
         )
 
     def _run_tests_before(self) -> Dict[str, Any]:
@@ -170,10 +203,7 @@ class ValidationAgent:
         test_command = self.repo_context.get("test_command", "pytest tests/")
         working_dir = self.repo_context.get("path", ".")
 
-        result = self.test_runner.run_test_suite(
-            test_command=test_command,
-            working_dir=working_dir
-        )
+        result = self.test_runner.run_test_suite(test_command=test_command, working_dir=working_dir)
 
         # Extract failed test names from output if not provided
         if "failed_tests" not in result:
@@ -191,10 +221,7 @@ class ValidationAgent:
         test_command = self.repo_context.get("test_command", "pytest tests/")
         working_dir = self.repo_context.get("path", ".")
 
-        result = self.test_runner.run_test_suite(
-            test_command=test_command,
-            working_dir=working_dir
-        )
+        result = self.test_runner.run_test_suite(test_command=test_command, working_dir=working_dir)
 
         # Extract failed test names from output if not provided
         if "failed_tests" not in result:
@@ -203,9 +230,7 @@ class ValidationAgent:
         return result
 
     def _detect_regression(
-        self,
-        tests_before: Dict[str, Any],
-        tests_after: Dict[str, Any]
+        self, tests_before: Dict[str, Any], tests_after: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Detect regression by comparing test results.
@@ -220,10 +245,7 @@ class ValidationAgent:
         return self.regression_detector.compare_results(tests_before, tests_after)
 
     def _determine_target_test_status(
-        self,
-        tests_before: Dict[str, Any],
-        tests_after: Dict[str, Any],
-        target_test: Optional[str]
+        self, tests_before: Dict[str, Any], tests_after: Dict[str, Any], target_test: Optional[str]
     ) -> str:
         """
         Determine the status of the target test.
@@ -333,7 +355,8 @@ class ValidationAgent:
         """
         # Simple extraction - look for FAILED test::name patterns
         import re
-        pattern = r'FAILED\s+(\S+)'
+
+        pattern = r"FAILED\s+(\S+)"
         matches = re.findall(pattern, output)
         return matches
 
@@ -356,5 +379,5 @@ class ValidationAgent:
             "target_test_status": "not_found",
             "regression_check": {},
             "test_output": error_msg,
-            "execution_time": time.time() - start_time
+            "execution_time": time.time() - start_time,
         }

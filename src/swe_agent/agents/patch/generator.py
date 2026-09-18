@@ -9,24 +9,48 @@ Task 5.2: Patch Generator
 4. 验证补丁大小
 5. 验证语法正确性
 """
+
 import ast
 import difflib
 import uuid
 from typing import Dict, List, Tuple, Optional, Any
 
+from swe_agent.llm import LLMClient
+from swe_agent.config import Config, load_config
+
 
 class PatchGenerator:
     """Patch 生成器"""
 
-    def __init__(self):
-        """初始化生成器"""
-        pass
+    def __init__(self, config: Optional[Config] = None, llm_client: Optional[LLMClient] = None):
+        """初始化生成器
+
+        Args:
+            config: 配置对象
+            llm_client: LLM 客户端（可选，用于测试时 mock）
+        """
+        self.config = config or load_config()
+        self._llm_client = llm_client
+
+    @property
+    def llm_client(self) -> LLMClient:
+        if self._llm_client is None:
+            self._llm_client = self._create_llm_client()
+        return self._llm_client
+
+    @llm_client.setter
+    def llm_client(self, client: LLMClient) -> None:
+        self._llm_client = client
+
+    def _create_llm_client(self) -> LLMClient:
+        """创建 LLM 客户端"""
+        return LLMClient(
+            provider=self.config.llm_provider,
+            model=self.config.llm_model,
+        )
 
     def generate_patch(
-        self,
-        context: Dict[str, Any],
-        root_cause: Dict[str, Any],
-        error_info: Dict[str, Any]
+        self, context: Dict[str, Any], root_cause: Dict[str, Any], error_info: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         生成单个修复补丁
@@ -52,12 +76,8 @@ class PatchGenerator:
         original_code = self._extract_original_code(context)
 
         # 生成 unified diff
-        file_path = context.get('file_path', 'unknown')
-        unified_diff = self.format_as_unified_diff(
-            original_code,
-            modified_code,
-            filename=file_path
-        )
+        file_path = context.get("file_path", "unknown")
+        unified_diff = self.format_as_unified_diff(original_code, modified_code, filename=file_path)
 
         # 提取修改的行号
         modified_lines = self._extract_modified_lines(unified_diff)
@@ -69,12 +89,14 @@ class PatchGenerator:
         confidence = self._calculate_confidence(context, modified_code)
 
         return {
-            'patch_id': str(uuid.uuid4()),
-            'file_path': file_path,
-            'unified_diff': unified_diff,
-            'modified_lines': modified_lines,
-            'description': description,
-            'confidence': confidence
+            "patch_id": str(uuid.uuid4()),
+            "file_path": file_path,
+            "unified_diff": unified_diff,
+            "original_code": original_code,
+            "modified_code": modified_code,
+            "modified_lines": modified_lines,
+            "description": description,
+            "confidence": confidence,
         }
 
     def generate_multiple_patches(
@@ -82,7 +104,7 @@ class PatchGenerator:
         context: Dict[str, Any],
         root_cause: Dict[str, Any],
         error_info: Dict[str, Any],
-        n: int = 3
+        n: int = 3,
     ) -> List[Dict[str, Any]]:
         """
         生成多个候选补丁（Beam Search）
@@ -101,18 +123,16 @@ class PatchGenerator:
 
         # 提取原始代码
         original_code = self._extract_original_code(context)
-        file_path = context.get('file_path', 'unknown')
+        file_path = context.get("file_path", "unknown")
 
         patches = []
         for candidate in candidates:
-            modified_code = candidate['code']
-            confidence = candidate['confidence']
+            modified_code = candidate["code"]
+            confidence = candidate["confidence"]
 
             # 生成 unified diff
             unified_diff = self.format_as_unified_diff(
-                original_code,
-                modified_code,
-                filename=file_path
+                original_code, modified_code, filename=file_path
             )
 
             # 提取修改的行号
@@ -121,26 +141,25 @@ class PatchGenerator:
             # 生成描述
             description = self._generate_description(root_cause, error_info)
 
-            patches.append({
-                'patch_id': str(uuid.uuid4()),
-                'file_path': file_path,
-                'unified_diff': unified_diff,
-                'modified_lines': modified_lines,
-                'description': description,
-                'confidence': confidence
-            })
+            patches.append(
+                {
+                    "patch_id": str(uuid.uuid4()),
+                    "file_path": file_path,
+                    "unified_diff": unified_diff,
+                    "original_code": original_code,
+                    "modified_code": modified_code,
+                    "modified_lines": modified_lines,
+                    "description": description,
+                    "confidence": confidence,
+                }
+            )
 
         # 按置信度降序排列
-        patches.sort(key=lambda x: x['confidence'], reverse=True)
+        patches.sort(key=lambda x: x["confidence"], reverse=True)
 
         return patches
 
-    def format_as_unified_diff(
-        self,
-        original: str,
-        modified: str,
-        filename: str = 'file'
-    ) -> str:
+    def format_as_unified_diff(self, original: str, modified: str, filename: str = "file") -> str:
         """
         格式化为 unified diff
 
@@ -153,27 +172,25 @@ class PatchGenerator:
             unified diff 格式的字符串
         """
         # 分割成行
-        original_lines = original.splitlines(keepends=True)
-        modified_lines = modified.splitlines(keepends=True)
+        original_lines = original.splitlines()
+        modified_lines = modified.splitlines()
 
         # 生成 unified diff
         diff = difflib.unified_diff(
             original_lines,
             modified_lines,
-            fromfile=f'a/{filename}',
-            tofile=f'b/{filename}',
-            lineterm=''
+            fromfile=f"a/{filename}",
+            tofile=f"b/{filename}",
+            lineterm="",
         )
 
-        diff_text = '\n'.join(diff)
+        diff_text = "\n".join(diff)
+        if diff_text:
+            diff_text += "\n"
 
         return diff_text
 
-    def validate_patch_size(
-        self,
-        patch: str,
-        max_lines: int = 50
-    ) -> Tuple[bool, int]:
+    def validate_patch_size(self, patch: str, max_lines: int = 50) -> Tuple[bool, int]:
         """
         验证补丁大小
 
@@ -191,10 +208,10 @@ class PatchGenerator:
         added_count = 0
         removed_count = 0
 
-        for line in patch.split('\n'):
-            if line.startswith('+') and not line.startswith('+++'):
+        for line in patch.split("\n"):
+            if line.startswith("+") and not line.startswith("+++"):
                 added_count += 1
-            elif line.startswith('-') and not line.startswith('---'):
+            elif line.startswith("-") and not line.startswith("---"):
                 removed_count += 1
 
         # 修改行数 = max(添加的行数, 删除的行数)
@@ -205,11 +222,7 @@ class PatchGenerator:
 
         return is_valid, modified_count
 
-    def validate_syntax(
-        self,
-        code: str,
-        language: str = 'python'
-    ) -> Tuple[bool, Optional[str]]:
+    def validate_syntax(self, code: str, language: str = "python") -> Tuple[bool, Optional[str]]:
         """
         验证代码语法
 
@@ -220,7 +233,7 @@ class PatchGenerator:
         Returns:
             (是否有效, 错误信息)
         """
-        if language == 'python':
+        if language == "python":
             try:
                 ast.parse(code)
                 return True, None
@@ -237,16 +250,10 @@ class PatchGenerator:
     # ========================================================================
 
     def _call_llm(
-        self,
-        context: Dict[str, Any],
-        root_cause: Dict[str, Any],
-        error_info: Dict[str, Any]
+        self, context: Dict[str, Any], root_cause: Dict[str, Any], error_info: Dict[str, Any]
     ) -> str:
         """
         调用 LLM 生成修复代码
-
-        这个方法在实际使用中会调用 Anthropic API，
-        在测试中会被 mock
 
         Args:
             context: 代码上下文
@@ -256,16 +263,25 @@ class PatchGenerator:
         Returns:
             修复后的代码
         """
-        # 实际实现会调用 LLM API
-        # 这里抛出异常，因为在测试中会被 mock
-        raise NotImplementedError("This method should be mocked in tests")
+        # 构建提示词
+        prompt = self._build_fix_prompt(context, root_cause, error_info)
+
+        # 调用 LLM
+        response = self.llm_client.generate(
+            prompt=prompt,
+            max_tokens=self.config.llm_max_tokens,
+            temperature=self.config.llm_temperature,
+        )
+
+        # 提取代码部分
+        return self._extract_code_from_response(response)
 
     def _call_llm_multiple(
         self,
         context: Dict[str, Any],
         root_cause: Dict[str, Any],
         error_info: Dict[str, Any],
-        n: int
+        n: int,
     ) -> List[Dict[str, Any]]:
         """
         调用 LLM 生成多个候选修复
@@ -279,9 +295,24 @@ class PatchGenerator:
         Returns:
             候选列表，每个候选包含 code 和 confidence
         """
-        # 实际实现会调用 LLM API
-        # 这里抛出异常，因为在测试中会被 mock
-        raise NotImplementedError("This method should be mocked in tests")
+        # 构建提示词
+        prompt = self._build_fix_prompt(context, root_cause, error_info, multiple=True)
+
+        # 调用 LLM 生成多个候选
+        responses = self.llm_client.generate_multiple(
+            prompt=prompt,
+            n=n,
+            max_tokens=self.config.llm_max_tokens,
+            temperature=0.7,  # 使用更高的温度以获得多样性
+        )
+
+        # 提取代码并返回
+        candidates = []
+        for resp in responses:
+            code = self._extract_code_from_response(resp["code"])
+            candidates.append({"code": code, "confidence": resp["confidence"]})
+
+        return candidates
 
     def _extract_original_code(self, context: Dict[str, Any]) -> str:
         """
@@ -294,33 +325,33 @@ class PatchGenerator:
             原始代码字符串
         """
         # 尝试从文件路径读取
-        file_path = context.get('file_path', '')
+        file_path = context.get("file_path", "")
         if file_path:
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     return f.read()
             except Exception:
                 pass
 
         # 否则从上下文字符串中提取
-        context_str = context.get('context', '')
+        context_str = context.get("context", "")
         if context_str:
             # 解析上下文格式（带行号的格式）
             lines = []
-            for line in context_str.split('\n'):
+            for line in context_str.split("\n"):
                 # 跳过注释行
-                if line.strip().startswith('#'):
+                if line.strip().startswith("#"):
                     continue
                 # 提取代码内容（去除行号）
-                if '|' in line:
-                    code_part = line.split('|', 1)[1] if '|' in line else line
+                if "|" in line:
+                    code_part = line.split("|", 1)[1] if "|" in line else line
                     lines.append(code_part)
                 else:
                     lines.append(line)
 
-            return '\n'.join(lines)
+            return "\n".join(lines)
 
-        return ''
+        return ""
 
     def _extract_modified_lines(self, unified_diff: str) -> List[int]:
         """
@@ -334,19 +365,19 @@ class PatchGenerator:
         """
         modified_lines = []
 
-        for line in unified_diff.split('\n'):
+        for line in unified_diff.split("\n"):
             # 查找 @@ -x,y +a,b @@ 格式的行
-            if line.startswith('@@'):
+            if line.startswith("@@"):
                 # 提取 +a,b 部分
-                parts = line.split('@@')
+                parts = line.split("@@")
                 if len(parts) >= 2:
                     range_info = parts[1].strip()
                     # 解析 -x,y +a,b
-                    if '+' in range_info:
-                        plus_part = range_info.split('+')[1].strip()
-                        if ',' in plus_part:
-                            start_line = int(plus_part.split(',')[0])
-                            count = int(plus_part.split(',')[1].split()[0])
+                    if "+" in range_info:
+                        plus_part = range_info.split("+")[1].strip()
+                        if "," in plus_part:
+                            start_line = int(plus_part.split(",")[0])
+                            count = int(plus_part.split(",")[1].split()[0])
                         else:
                             start_line = int(plus_part.split()[0])
                             count = 1
@@ -357,11 +388,7 @@ class PatchGenerator:
 
         return sorted(list(set(modified_lines)))
 
-    def _generate_description(
-        self,
-        root_cause: Dict[str, Any],
-        error_info: Dict[str, Any]
-    ) -> str:
+    def _generate_description(self, root_cause: Dict[str, Any], error_info: Dict[str, Any]) -> str:
         """
         生成补丁描述
 
@@ -372,16 +399,12 @@ class PatchGenerator:
         Returns:
             描述字符串
         """
-        error_type = error_info.get('error_type', 'Error')
-        root_cause_desc = root_cause.get('description', 'Unknown issue')
+        error_type = error_info.get("error_type", "Error")
+        root_cause_desc = root_cause.get("description", "Unknown issue")
 
         return f"Fix {error_type}: {root_cause_desc}"
 
-    def _calculate_confidence(
-        self,
-        context: Dict[str, Any],
-        modified_code: str
-    ) -> float:
+    def _calculate_confidence(self, context: Dict[str, Any], modified_code: str) -> float:
         """
         计算补丁的置信度
 
@@ -400,11 +423,11 @@ class PatchGenerator:
         confidence = 0.5  # 基础置信度
 
         # 1. 检查上下文完整性
-        if context.get('context'):
+        if context.get("context"):
             confidence += 0.1
-        if context.get('imports'):
+        if context.get("imports"):
             confidence += 0.05
-        if context.get('related_symbols'):
+        if context.get("related_symbols"):
             confidence += 0.05
 
         # 2. 检查语法正确性
@@ -423,3 +446,86 @@ class PatchGenerator:
         confidence = max(0.0, min(1.0, confidence))
 
         return confidence
+
+    def _build_fix_prompt(
+        self,
+        context: Dict[str, Any],
+        root_cause: Dict[str, Any],
+        error_info: Dict[str, Any],
+        multiple: bool = False,
+    ) -> str:
+        """
+        构建修复代码的提示词
+
+        Args:
+            context: 代码上下文
+            root_cause: 根因信息
+            error_info: 错误信息
+            multiple: 是否生成多个候选
+
+        Returns:
+            提示词字符串
+        """
+        file_path = context.get("file_path", "unknown")
+        code_context = context.get("original_code", context.get("context", ""))
+        error_type = error_info.get("error_type", "Error")
+        error_message = error_info.get("error_message", error_info.get("message", ""))
+        root_cause_desc = root_cause.get("description", "")
+
+        prompt = f"""You are a code fixing assistant. Please fix the following bug.
+
+**File**: {file_path}
+
+**Error Type**: {error_type}
+**Error Message**: {error_message}
+
+**Root Cause**: {root_cause_desc}
+
+**Issue requirements**: {context.get('issue_body', '')}
+
+**Code Context**:
+```
+{code_context}
+```
+
+**Instructions**:
+1. Analyze the error and root cause
+2. Generate a minimal fix (prefer small changes)
+3. Ensure the fix is syntactically correct
+4. Output ONLY the complete fixed code, no explanations
+5. Keep all existing code structure and formatting
+
+**Fixed Code**:
+```python
+"""
+        if multiple:
+            prompt += "\n(Generate a different approach for fixing this bug)\n"
+
+        return prompt
+
+    def _extract_code_from_response(self, response: str) -> str:
+        """
+        从 LLM 响应中提取代码
+
+        Args:
+            response: LLM 响应文本
+
+        Returns:
+            提取的代码
+        """
+        # 尝试提取代码块
+        if "```python" in response:
+            # 提取 python 代码块
+            parts = response.split("```python")
+            if len(parts) > 1:
+                code_part = parts[1].split("```")[0]
+                return code_part.strip()
+
+        if "```" in response:
+            # 提取通用代码块
+            parts = response.split("```")
+            if len(parts) >= 3:
+                return parts[1].strip()
+
+        # 如果没有代码块，返回整个响应
+        return response.strip()

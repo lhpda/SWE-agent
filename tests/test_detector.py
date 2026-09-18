@@ -83,7 +83,7 @@ class TestProjectTypeDetector:
 
     def test_detect_java_from_pom_xml(self, tmp_path: Path):
         """Test Java project detection via pom.xml."""
-        (tmp_path / "pom.xml").write_text('<project><modelVersion>4.0.0</modelVersion></project>')
+        (tmp_path / "pom.xml").write_text("<project><modelVersion>4.0.0</modelVersion></project>")
 
         detector = ProjectTypeDetector(str(tmp_path))
         result = detector.detect()
@@ -159,7 +159,9 @@ class TestTestFrameworkDetector:
 
     def test_detect_unittest_from_setup_py(self, tmp_path: Path):
         """Test unittest detection from setup.py."""
-        (tmp_path / "setup.py").write_text("from setuptools import setup\nsetup(test_suite='tests')")
+        (tmp_path / "setup.py").write_text(
+            "from setuptools import setup\nsetup(test_suite='tests')"
+        )
 
         detector = TestFrameworkDetector(str(tmp_path), "python")
         result = detector.detect()
@@ -168,9 +170,7 @@ class TestTestFrameworkDetector:
 
     def test_detect_jest_from_package_json(self, tmp_path: Path):
         """Test Jest detection from package.json."""
-        (tmp_path / "package.json").write_text(
-            '{"devDependencies": {"jest": "^29.0.0"}}'
-        )
+        (tmp_path / "package.json").write_text('{"devDependencies": {"jest": "^29.0.0"}}')
 
         detector = TestFrameworkDetector(str(tmp_path), "nodejs")
         result = detector.detect()
@@ -179,9 +179,7 @@ class TestTestFrameworkDetector:
 
     def test_detect_mocha_from_package_json(self, tmp_path: Path):
         """Test Mocha detection from package.json."""
-        (tmp_path / "package.json").write_text(
-            '{"devDependencies": {"mocha": "^10.0.0"}}'
-        )
+        (tmp_path / "package.json").write_text('{"devDependencies": {"mocha": "^10.0.0"}}')
 
         detector = TestFrameworkDetector(str(tmp_path), "nodejs")
         result = detector.detect()
@@ -191,8 +189,8 @@ class TestTestFrameworkDetector:
     def test_detect_junit_from_pom_xml(self, tmp_path: Path):
         """Test JUnit detection from pom.xml."""
         (tmp_path / "pom.xml").write_text(
-            '<project><dependencies><dependency>'
-            '<artifactId>junit</artifactId></dependency></dependencies></project>'
+            "<project><dependencies><dependency>"
+            "<artifactId>junit</artifactId></dependency></dependencies></project>"
         )
 
         detector = TestFrameworkDetector(str(tmp_path), "java")
@@ -234,9 +232,7 @@ class TestTestCommandInferrer:
 
     def test_infer_npm_test_from_package_json(self, tmp_path: Path):
         """Test npm test command inference from package.json."""
-        (tmp_path / "package.json").write_text(
-            '{"scripts": {"test": "jest --coverage"}}'
-        )
+        (tmp_path / "package.json").write_text('{"scripts": {"test": "jest --coverage"}}')
 
         inferrer = TestCommandInferrer(str(tmp_path), "nodejs", "jest")
         result = inferrer.infer()
@@ -254,7 +250,7 @@ class TestTestCommandInferrer:
 
     def test_infer_maven_test_command(self, tmp_path: Path):
         """Test Maven test command inference."""
-        (tmp_path / "pom.xml").write_text('<project></project>')
+        (tmp_path / "pom.xml").write_text("<project></project>")
 
         inferrer = TestCommandInferrer(str(tmp_path), "java", "junit")
         result = inferrer.infer()
@@ -272,7 +268,7 @@ class TestTestCommandInferrer:
 
     def test_infer_cargo_test_command(self, tmp_path: Path):
         """Test cargo test command inference."""
-        (tmp_path / "Cargo.toml").write_text('[package]\n')
+        (tmp_path / "Cargo.toml").write_text("[package]\n")
 
         inferrer = TestCommandInferrer(str(tmp_path), "rust", "cargo-test")
         result = inferrer.infer()
@@ -315,7 +311,7 @@ class TestDependencyInstallDetector:
 
     def test_java_maven_needs_install(self, tmp_path: Path):
         """Test Java Maven project dependency detection."""
-        (tmp_path / "pom.xml").write_text('<project><dependencies></dependencies></project>')
+        (tmp_path / "pom.xml").write_text("<project><dependencies></dependencies></project>")
 
         detector = DependencyInstallDetector(str(tmp_path), "java")
         result = detector.needs_install()

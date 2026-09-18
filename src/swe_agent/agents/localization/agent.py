@@ -8,6 +8,7 @@ Implements Task 3.3: Main agent that orchestrates the localization process:
 """
 
 import time
+from pathlib import Path
 from typing import Any, Dict, List
 
 from swe_agent.agents.localization.parser import IssueParser
@@ -161,13 +162,17 @@ class LocalizationAgent:
         """
         self.tool_call_count += 1
 
-        # Use already parsed data if available
-        if self.issue_context.parsed:
-            return self.issue_context.parsed
-
-        # Otherwise parse the issue body
-        parsed_context = self.parser.parse(self.issue_context.body)
-        return parsed_context.parsed
+        parsed = (
+            self.parser.parse(self.issue_context.body).parsed
+            if self.issue_context.body.strip()
+            else {}
+        )
+        for key, value in self.issue_context.parsed.items():
+            if value:
+                parsed[key] = value
+        if parsed.get("error_message"):
+            parsed.setdefault("error_messages", []).append(parsed["error_message"])
+        return parsed
 
     def _search_with_strategies(self, parsed_issue: Dict[str, Any]) -> List[SearchCandidate]:
         """Execute all search strategies to find candidate files.
@@ -179,6 +184,18 @@ class LocalizationAgent:
             List of SearchCandidate objects from all strategies
         """
         all_candidates = []
+        root = Path(self.repo_context.path).resolve()
+        for filename in parsed_issue.get("files", []):
+            path = (root / filename).resolve()
+            if path.is_relative_to(root) and path.is_file():
+                all_candidates.append(
+                    SearchCandidate(
+                        file_path=str(path.relative_to(root)),
+                        confidence=0.9,
+                        reason="File explicitly identified in issue",
+                        relevant_symbols=parsed_issue.get("relevant_functions", []),
+                    )
+                )
 
         try:
             # Strategy 1: Stack Trace Search (highest priority)

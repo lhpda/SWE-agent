@@ -86,9 +86,7 @@ def mock_agents():
     localization_agent = MagicMock()
     localization_agent.run.return_value = LocalizationResult(
         status="success",
-        candidates=[
-            {"file_path": "/tmp/test.py", "confidence": 0.9, "lines": [10, 20]}
-        ],
+        candidates=[{"file_path": "/tmp/test.py", "confidence": 0.9, "lines": [10, 20]}],
         search_strategy="stack_trace",
         execution_time=2.5,
         tool_calls=5,
@@ -171,9 +169,7 @@ class TestPipelineOrchestratorInitialization:
 
         assert orchestrator.global_timeout == 900
 
-    def test_initialization_creates_session(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_initialization_creates_session(self, issue_context, repo_context, mock_state_store):
         """Test that initialization creates a session in state store."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,
@@ -571,9 +567,7 @@ class TestPipelineTimeout:
 class TestPipelineResume:
     """Tests for resume capability."""
 
-    def test_resume_from_localization(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_resume_from_localization(self, issue_context, repo_context, mock_state_store):
         """Test resuming from localization stage."""
         session_id = "session-resume-1"
 
@@ -582,7 +576,10 @@ class TestPipelineResume:
         mock_state_store.load_metadata.return_value = {
             "current_state": "localizing",
             "session_id": session_id,
-            "metadata": {},
+            "metadata": {
+                "issue": issue_context.model_dump(),
+                "repository": repo_context.model_dump(),
+            },
             "history": [
                 {"state": "idle", "timestamp": datetime.now(timezone.utc).isoformat()},
                 {"state": "localizing", "timestamp": datetime.now(timezone.utc).isoformat()},
@@ -598,9 +595,7 @@ class TestPipelineResume:
         # Resume should recreate the orchestrator
         # Full implementation will handle actual resumption
 
-    def test_resume_from_reproduction(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_resume_from_reproduction(self, issue_context, repo_context, mock_state_store):
         """Test resuming from reproduction stage."""
         session_id = "session-resume-2"
 
@@ -608,7 +603,10 @@ class TestPipelineResume:
         mock_state_store.load_metadata.return_value = {
             "current_state": "reproducing",
             "session_id": session_id,
-            "metadata": {},
+            "metadata": {
+                "issue": issue_context.model_dump(),
+                "repository": repo_context.model_dump(),
+            },
             "history": [
                 {"state": "idle", "timestamp": datetime.now(timezone.utc).isoformat()},
                 {"state": "localizing", "timestamp": datetime.now(timezone.utc).isoformat()},
@@ -617,10 +615,17 @@ class TestPipelineResume:
         }
 
         # Mock load stage results
-        mock_state_store.load_stage_result.return_value = {
-            "status": "success",
-            "candidates": [],
-        }
+        mock_state_store.load_stage_result.side_effect = lambda run_id, stage: (
+            {
+                "status": "success",
+                "candidates": [],
+                "search_strategy": "stack_trace",
+                "execution_time": 0.1,
+                "tool_calls": 1,
+            }
+            if stage == "localization"
+            else None
+        )
 
         result = PipelineOrchestrator.resume(
             run_id=session_id,
@@ -643,9 +648,7 @@ class TestPipelineResume:
 class TestPipelineGetState:
     """Tests for get_state() method."""
 
-    def test_get_state_returns_pipeline_state(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_get_state_returns_pipeline_state(self, issue_context, repo_context, mock_state_store):
         """Test get_state returns PipelineState."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,
@@ -742,9 +745,7 @@ class TestPipelineDataPassing:
 class TestPipelineIntegration:
     """Integration tests with StateMachine, RetryStrategy, and ErrorHandler."""
 
-    def test_integration_with_state_machine(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_integration_with_state_machine(self, issue_context, repo_context, mock_state_store):
         """Test integration with StateMachine."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,
@@ -759,9 +760,7 @@ class TestPipelineIntegration:
         # Should start in IDLE state
         assert orchestrator.state_machine.get_current_state() == State.IDLE
 
-    def test_integration_with_retry_strategy(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_integration_with_retry_strategy(self, issue_context, repo_context, mock_state_store):
         """Test integration with RetryStrategy."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,
@@ -778,9 +777,7 @@ class TestPipelineIntegration:
         assert orchestrator.retry_strategy.get_max_retries("PATCHING") == 3
         assert orchestrator.retry_strategy.get_max_retries("VALIDATING") == 1
 
-    def test_integration_with_error_handler(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_integration_with_error_handler(self, issue_context, repo_context, mock_state_store):
         """Test integration with ErrorHandler."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,
@@ -794,9 +791,7 @@ class TestPipelineIntegration:
         # Error handler should start empty
         assert len(orchestrator.error_handler.get_errors()) == 0
 
-    def test_state_machine_persistence(
-        self, issue_context, repo_context, mock_state_store
-    ):
+    def test_state_machine_persistence(self, issue_context, repo_context, mock_state_store):
         """Test that state machine state is persisted."""
         orchestrator = PipelineOrchestrator(
             issue=issue_context,

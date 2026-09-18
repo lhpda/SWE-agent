@@ -575,9 +575,7 @@ class DetectProjectTypeTool(Tool):
             return ToolResult(output=output, truncated=False)
 
         except Exception as e:
-            logger.error(
-                "detect_project_type_error", directory=directory, error=str(e)
-            )
+            logger.error("detect_project_type_error", directory=directory, error=str(e))
             return ToolResult(
                 output=None,
                 truncated=False,

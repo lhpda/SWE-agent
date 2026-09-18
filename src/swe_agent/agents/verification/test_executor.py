@@ -32,10 +32,7 @@ class TestExecutor:
         self.default_timeout = 300  # 5 minutes
 
     def execute_tests(
-        self,
-        test_command: str,
-        working_dir: str,
-        timeout: Optional[int] = None
+        self, test_command: str, working_dir: str, timeout: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Execute tests in sandbox environment.
@@ -67,7 +64,7 @@ class TestExecutor:
             "status": result["status"],
             "output": output,
             "exit_code": result["exit_code"],
-            "execution_time": result["execution_time"]
+            "execution_time": result["execution_time"],
         }
 
     def parse_test_results(self, output: str) -> Dict[str, Any]:
@@ -94,12 +91,7 @@ class TestExecutor:
         elif self._is_junit_xml(output):
             return self._parse_junit_xml(output)
         else:
-            return {
-                "framework": "unknown",
-                "passed": [],
-                "failed": [],
-                "skipped": []
-            }
+            return {"framework": "unknown", "passed": [], "failed": [], "skipped": []}
 
     def extract_test_stats(self, output: str) -> Dict[str, Any]:
         """
@@ -116,17 +108,11 @@ class TestExecutor:
                 - total: Total number of tests
                 - duration: Execution time in seconds
         """
-        stats = {
-            "passed": 0,
-            "failed": 0,
-            "skipped": 0,
-            "total": 0,
-            "duration": 0.0
-        }
+        stats = {"passed": 0, "failed": 0, "skipped": 0, "total": 0, "duration": 0.0}
 
         # Try pytest format first - more flexible pattern
         # Pattern captures: "5 passed, 2 failed, 1 skipped in 3.45s"
-        pytest_pattern = r'=+\s*(?:(\d+)\s+passed)?(?:,\s*(\d+)\s+failed)?(?:,\s*(\d+)\s+skipped)?.*?in\s+([\d.]+)s'
+        pytest_pattern = r"=+\s*(?:(\d+)\s+passed)?(?:,\s*(\d+)\s+failed)?(?:,\s*(\d+)\s+skipped)?.*?in\s+([\d.]+)s"
         pytest_match = re.search(pytest_pattern, output)
 
         if pytest_match:
@@ -144,8 +130,8 @@ class TestExecutor:
 
         # Try jest format
         jest_match = re.search(
-            r'Tests:\s*(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(?:(\d+)\s+passed,?\s*)?(\d+)\s+total',
-            output
+            r"Tests:\s*(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(?:(\d+)\s+passed,?\s*)?(\d+)\s+total",
+            output,
         )
         if jest_match:
             failed = jest_match.group(1)
@@ -159,7 +145,7 @@ class TestExecutor:
             stats["total"] = int(total) if total else 0
 
             # Try to find duration
-            time_match = re.search(r'Time:\s*([\d.]+)s', output)
+            time_match = re.search(r"Time:\s*([\d.]+)s", output)
             if time_match:
                 stats["duration"] = float(time_match.group(1))
 
@@ -168,9 +154,7 @@ class TestExecutor:
         return stats
 
     def compare_results(
-        self,
-        before: Dict[str, List[str]],
-        after: Dict[str, List[str]]
+        self, before: Dict[str, List[str]], after: Dict[str, List[str]]
     ) -> Dict[str, Any]:
         """
         Compare test results before and after changes.
@@ -204,7 +188,7 @@ class TestExecutor:
             "improved": improved,
             "regressed": regressed,
             "still_failing": still_failing,
-            "net_improvement": len(improved) - len(regressed)
+            "net_improvement": len(improved) - len(regressed),
         }
 
     # Private helper methods
@@ -212,30 +196,31 @@ class TestExecutor:
     def _is_pytest_output(self, output: str) -> bool:
         """Check if output is from pytest."""
         # Check for pytest-specific patterns
-        has_pytest_summary = bool(re.search(r'=+\s*\d+\s+(passed|failed|skipped).*in\s+[\d.]+s\s*=+', output))
-        has_pytest_test_format = bool(re.search(r'test_\w+\.py::\w+\s+(PASSED|FAILED|SKIPPED)', output))
+        has_pytest_summary = bool(
+            re.search(r"=+\s*\d+\s+(passed|failed|skipped).*in\s+[\d.]+s\s*=+", output)
+        )
+        has_pytest_test_format = bool(
+            re.search(r"test_\w+\.py::\w+\s+(PASSED|FAILED|SKIPPED)", output)
+        )
         return has_pytest_summary or has_pytest_test_format
 
     def _is_jest_output(self, output: str) -> bool:
         """Check if output is from jest."""
-        return bool(re.search(r'Tests:\s*\d+\s+(passed|failed)', output) or
-                    re.search(r'(PASS|FAIL)\s+\S+\.test\.(js|ts)', output))
+        return bool(
+            re.search(r"Tests:\s*\d+\s+(passed|failed)", output)
+            or re.search(r"(PASS|FAIL)\s+\S+\.test\.(js|ts)", output)
+        )
 
     def _is_junit_xml(self, output: str) -> bool:
         """Check if output is JUnit XML format."""
-        return output.strip().startswith('<?xml') and '<testsuite' in output
+        return output.strip().startswith("<?xml") and "<testsuite" in output
 
     def _parse_pytest_output(self, output: str) -> Dict[str, Any]:
         """Parse pytest output format."""
-        result = {
-            "framework": "pytest",
-            "passed": [],
-            "failed": [],
-            "skipped": []
-        }
+        result = {"framework": "pytest", "passed": [], "failed": [], "skipped": []}
 
         # Match individual test results
-        for match in re.finditer(r'(\S+\.py::\S+)\s+(PASSED|FAILED|SKIPPED)', output):
+        for match in re.finditer(r"(\S+\.py::\S+)\s+(PASSED|FAILED|SKIPPED)", output):
             test_name = match.group(1)
             status = match.group(2)
 
@@ -250,15 +235,10 @@ class TestExecutor:
 
     def _parse_jest_output(self, output: str) -> Dict[str, Any]:
         """Parse jest output format."""
-        result = {
-            "framework": "jest",
-            "passed": [],
-            "failed": [],
-            "skipped": []
-        }
+        result = {"framework": "jest", "passed": [], "failed": [], "skipped": []}
 
         # Match test file results
-        for match in re.finditer(r'(PASS|FAIL)\s+(\S+\.test\.(js|ts))', output):
+        for match in re.finditer(r"(PASS|FAIL)\s+(\S+\.test\.(js|ts))", output):
             status = match.group(1)
             test_file = match.group(2)
 
@@ -269,11 +249,11 @@ class TestExecutor:
 
         # Match individual test results within files (with unicode checkmark/cross)
         # ✓ (U+2713) for passed, ✕ (U+2715) for failed
-        for match in re.finditer(r'✓\s+(.+?)\s+\((\d+)\s*ms\)', output):
+        for match in re.finditer(r"✓\s+(.+?)\s+\((\d+)\s*ms\)", output):
             test_name = match.group(1).strip()
             result["passed"].append(test_name)
 
-        for match in re.finditer(r'✕\s+(.+?)\s+\((\d+)\s*ms\)', output):
+        for match in re.finditer(r"✕\s+(.+?)\s+\((\d+)\s*ms\)", output):
             test_name = match.group(1).strip()
             result["failed"].append(test_name)
 
@@ -281,31 +261,26 @@ class TestExecutor:
 
     def _parse_junit_xml(self, output: str) -> Dict[str, Any]:
         """Parse JUnit XML format."""
-        result = {
-            "framework": "junit",
-            "passed": [],
-            "failed": [],
-            "skipped": []
-        }
+        result = {"framework": "junit", "passed": [], "failed": [], "skipped": []}
 
         try:
             root = ET.fromstring(output)
 
             # Handle both <testsuites> and direct <testsuite>
-            testsuites = root.findall('.//testsuite')
+            testsuites = root.findall(".//testsuite")
             if not testsuites:
-                testsuites = [root] if root.tag == 'testsuite' else []
+                testsuites = [root] if root.tag == "testsuite" else []
 
             for testsuite in testsuites:
-                for testcase in testsuite.findall('testcase'):
-                    test_name = testcase.get('name', '')
-                    classname = testcase.get('classname', '')
+                for testcase in testsuite.findall("testcase"):
+                    test_name = testcase.get("name", "")
+                    classname = testcase.get("classname", "")
                     full_name = f"{classname}.{test_name}" if classname else test_name
 
                     # Check for failure or skip
-                    if testcase.find('failure') is not None:
+                    if testcase.find("failure") is not None:
                         result["failed"].append(full_name)
-                    elif testcase.find('skipped') is not None:
+                    elif testcase.find("skipped") is not None:
                         result["skipped"].append(full_name)
                     else:
                         result["passed"].append(full_name)

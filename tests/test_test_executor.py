@@ -38,7 +38,7 @@ class TestExecuteTests:
             "stdout": "===== 5 passed in 1.23s =====",
             "stderr": "",
             "exit_code": 0,
-            "execution_time": 1.23
+            "execution_time": 1.23,
         }
 
         executor = TestExecutor(sandbox)
@@ -57,7 +57,7 @@ class TestExecuteTests:
             "stdout": "Tests passed",
             "stderr": "",
             "exit_code": 0,
-            "execution_time": 0.5
+            "execution_time": 0.5,
         }
 
         executor = TestExecutor(sandbox)
@@ -73,7 +73,7 @@ class TestExecuteTests:
             "stdout": "===== 3 passed, 2 failed in 2.45s =====",
             "stderr": "FAILED test_foo.py::test_bar",
             "exit_code": 1,
-            "execution_time": 2.45
+            "execution_time": 2.45,
         }
 
         executor = TestExecutor(sandbox)
@@ -91,7 +91,7 @@ class TestExecuteTests:
             "stdout": "Running tests...",
             "stderr": "",
             "exit_code": -1,
-            "execution_time": 300.0
+            "execution_time": 300.0,
         }
 
         executor = TestExecutor(sandbox)
@@ -108,7 +108,7 @@ class TestExecuteTests:
             "stdout": "Test output",
             "stderr": "Warning: deprecated",
             "exit_code": 0,
-            "execution_time": 1.0
+            "execution_time": 1.0,
         }
 
         executor = TestExecutor(sandbox)
@@ -310,12 +310,12 @@ class TestCompareResults:
         before = {
             "passed": ["test_a.py::test_1"],
             "failed": ["test_b.py::test_2", "test_c.py::test_3"],
-            "skipped": []
+            "skipped": [],
         }
         after = {
             "passed": ["test_a.py::test_1", "test_b.py::test_2", "test_c.py::test_3"],
             "failed": [],
-            "skipped": []
+            "skipped": [],
         }
 
         executor = TestExecutor(Mock())
@@ -330,16 +330,8 @@ class TestCompareResults:
 
     def test_compare_results_all_regressed(self):
         """Test: All tests regressed from passing to failing"""
-        before = {
-            "passed": ["test_a.py::test_1", "test_b.py::test_2"],
-            "failed": [],
-            "skipped": []
-        }
-        after = {
-            "passed": [],
-            "failed": ["test_a.py::test_1", "test_b.py::test_2"],
-            "skipped": []
-        }
+        before = {"passed": ["test_a.py::test_1", "test_b.py::test_2"], "failed": [], "skipped": []}
+        after = {"passed": [], "failed": ["test_a.py::test_1", "test_b.py::test_2"], "skipped": []}
 
         executor = TestExecutor(Mock())
         comparison = executor.compare_results(before, after)
@@ -355,12 +347,12 @@ class TestCompareResults:
         before = {
             "passed": ["test_a.py::test_1"],
             "failed": ["test_b.py::test_2", "test_c.py::test_3"],
-            "skipped": []
+            "skipped": [],
         }
         after = {
             "passed": ["test_b.py::test_2"],
             "failed": ["test_a.py::test_1", "test_c.py::test_3"],
-            "skipped": []
+            "skipped": [],
         }
 
         executor = TestExecutor(Mock())
@@ -376,16 +368,8 @@ class TestCompareResults:
 
     def test_compare_results_still_failing(self):
         """Test: Tests still failing after changes"""
-        before = {
-            "passed": [],
-            "failed": ["test_a.py::test_1", "test_b.py::test_2"],
-            "skipped": []
-        }
-        after = {
-            "passed": [],
-            "failed": ["test_a.py::test_1", "test_b.py::test_2"],
-            "skipped": []
-        }
+        before = {"passed": [], "failed": ["test_a.py::test_1", "test_b.py::test_2"], "skipped": []}
+        after = {"passed": [], "failed": ["test_a.py::test_1", "test_b.py::test_2"], "skipped": []}
 
         executor = TestExecutor(Mock())
         comparison = executor.compare_results(before, after)
@@ -397,16 +381,8 @@ class TestCompareResults:
 
     def test_compare_results_empty_before(self):
         """Test: Compare with empty before results"""
-        before = {
-            "passed": [],
-            "failed": [],
-            "skipped": []
-        }
-        after = {
-            "passed": ["test_a.py::test_1"],
-            "failed": ["test_b.py::test_2"],
-            "skipped": []
-        }
+        before = {"passed": [], "failed": [], "skipped": []}
+        after = {"passed": ["test_a.py::test_1"], "failed": ["test_b.py::test_2"], "skipped": []}
 
         executor = TestExecutor(Mock())
         comparison = executor.compare_results(before, after)
@@ -419,12 +395,12 @@ class TestCompareResults:
         before = {
             "passed": ["test_a.py::test_1"],
             "failed": ["test_b.py::test_2"],
-            "skipped": ["test_c.py::test_3"]
+            "skipped": ["test_c.py::test_3"],
         }
         after = {
             "passed": ["test_a.py::test_1", "test_c.py::test_3"],
             "failed": ["test_b.py::test_2"],
-            "skipped": []
+            "skipped": [],
         }
 
         executor = TestExecutor(Mock())

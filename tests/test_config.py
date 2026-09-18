@@ -211,15 +211,17 @@ class TestLoadConfigFromFile:
 
     def test_load_config_prefers_env_over_file(self, tmp_path, monkeypatch):
         """Test that environment variables override file config."""
-        pytest.importorskip("tomli")
+        __import__("tomllib")
 
         # Create config file
         config_file = tmp_path / "config.toml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 [swe_agent]
 localization_timeout = 400
 max_retries = 4
-""")
+"""
+        )
 
         # Set env var
         monkeypatch.setenv("SWE_AGENT_MAX_RETRIES", "10")

@@ -109,7 +109,7 @@ class TestRipgrepSearchTool:
         """Test search filtered by file type."""
         mock_run.return_value = MagicMock(
             returncode=0,
-            stdout="example.py:3:    print(\"Hello, World!\")\n",
+            stdout='example.py:3:    print("Hello, World!")\n',
             stderr="",
         )
 
@@ -135,9 +135,7 @@ class TestRipgrepSearchTool:
         )
 
         tool = RipgrepSearchTool()
-        result = tool.execute(
-            pattern="HELLO", path=str(temp_repo), case_sensitive=False
-        )
+        result = tool.execute(pattern="HELLO", path=str(temp_repo), case_sensitive=False)
 
         assert result.error is None
         assert result.output is not None
@@ -263,9 +261,7 @@ class TestSymbolSearchTool:
         )
 
         tool = SymbolSearchTool()
-        result = tool.execute(
-            symbol_name="Calculator", path=str(temp_repo), symbol_type="class"
-        )
+        result = tool.execute(symbol_name="Calculator", path=str(temp_repo), symbol_type="class")
 
         assert result.error is None
         assert result.output is not None
@@ -298,9 +294,7 @@ class TestSymbolSearchTool:
         )
 
         tool = SymbolSearchTool()
-        result = tool.execute(
-            symbol_name="nonexistent_symbol_xyz", path=str(temp_repo)
-        )
+        result = tool.execute(symbol_name="nonexistent_symbol_xyz", path=str(temp_repo))
 
         assert result.error is None
         assert result.output is not None
@@ -325,7 +319,7 @@ class TestSymbolSearchTool:
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout='{"name":"process","path":"duplicate.py","line":1,"kind":"function"}\n'
-                   '{"name":"process","path":"duplicate.py","line":5,"kind":"method"}\n',
+            '{"name":"process","path":"duplicate.py","line":5,"kind":"method"}\n',
             stderr="",
         )
 
@@ -344,9 +338,7 @@ class TestAstQueryTool:
     def test_find_function_calls(self, temp_repo: Path) -> None:
         """Test finding function call nodes."""
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="function_call", path=str(temp_repo / "example.py")
-        )
+        result = tool.execute(query_type="function_call", path=str(temp_repo / "example.py"))
 
         assert result.error is None
         assert result.output is not None
@@ -356,9 +348,7 @@ class TestAstQueryTool:
     def test_find_class_definitions(self, temp_repo: Path) -> None:
         """Test finding class definition nodes."""
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="class_definition", path=str(temp_repo / "example.py")
-        )
+        result = tool.execute(query_type="class_definition", path=str(temp_repo / "example.py"))
 
         assert result.error is None
         assert result.output is not None
@@ -367,9 +357,7 @@ class TestAstQueryTool:
     def test_find_function_definitions(self, temp_repo: Path) -> None:
         """Test finding function definition nodes."""
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="function_definition", path=str(temp_repo / "example.py")
-        )
+        result = tool.execute(query_type="function_definition", path=str(temp_repo / "example.py"))
 
         assert result.error is None
         assert result.output is not None
@@ -381,9 +369,7 @@ class TestAstQueryTool:
         (temp_repo / "test.xyz").write_text("some content")
 
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="function_definition", path=str(temp_repo / "test.xyz")
-        )
+        result = tool.execute(query_type="function_definition", path=str(temp_repo / "test.xyz"))
 
         # Should return error or empty result
         assert result.error is not None or (
@@ -393,9 +379,7 @@ class TestAstQueryTool:
     def test_invalid_file_path(self) -> None:
         """Test handling invalid file paths."""
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="function_definition", path="/nonexistent/file.py"
-        )
+        result = tool.execute(query_type="function_definition", path="/nonexistent/file.py")
 
         assert result.error is not None
 
@@ -414,9 +398,7 @@ class TestAstQueryTool:
     def test_javascript_ast_query(self, temp_repo: Path) -> None:
         """Test AST query on JavaScript file."""
         tool = AstQueryTool()
-        result = tool.execute(
-            query_type="function_definition", path=str(temp_repo / "example.js")
-        )
+        result = tool.execute(query_type="function_definition", path=str(temp_repo / "example.js"))
 
         assert result.error is None
         assert result.output is not None
@@ -497,9 +479,7 @@ class TestSearchToolIntegration:
 
         # Then query AST for function calls in that file (no mock needed, uses real tree-sitter)
         ast = AstQueryTool()
-        ast_result = ast.execute(
-            query_type="function_call", path=str(temp_repo / "example.py")
-        )
+        ast_result = ast.execute(query_type="function_call", path=str(temp_repo / "example.py"))
 
         assert ast_result.error is None
         assert ast_result.output is not None

@@ -7,6 +7,7 @@ Provides functionality to:
 - Rollback on failure
 - Verify application success
 """
+
 import os
 import ast
 from typing import Dict, Any, Optional
@@ -65,10 +66,7 @@ class PatchApplicator:
                 - error: str (if failed)
         """
         if self._current_snapshot_id is None or self.snapshot_manager is None:
-            return {
-                "success": False,
-                "error": "No snapshot available for rollback"
-            }
+            return {"success": False, "error": "No snapshot available for rollback"}
 
         try:
             self.snapshot_manager.restore_snapshot(self._current_snapshot_id)
@@ -76,10 +74,7 @@ class PatchApplicator:
             return {"success": True}
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     def verify_application(self, file_path: str) -> Dict[str, Any]:
         """
@@ -101,7 +96,7 @@ class PatchApplicator:
             "verified": True,
             "file_exists": path.exists(),
             "syntax_valid": True,
-            "permissions": None
+            "permissions": None,
         }
 
         # Check file exists
@@ -116,9 +111,9 @@ class PatchApplicator:
             pass
 
         # Validate syntax for Python files
-        if file_path.endswith('.py'):
+        if file_path.endswith(".py"):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                 ast.parse(content)
                 result["syntax_valid"] = True
@@ -132,10 +127,7 @@ class PatchApplicator:
         return result
 
     def apply_patch(
-        self,
-        patch_content: Dict[str, Any],
-        file_path: str,
-        sandbox: Optional[Any] = None
+        self, patch_content: Dict[str, Any], file_path: str, sandbox: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
         Apply a patch to a file with snapshot and rollback support.
@@ -162,7 +154,7 @@ class PatchApplicator:
             "file_path": file_path,
             "applied": False,
             "error": None,
-            "snapshot_id": None
+            "snapshot_id": None,
         }
 
         try:
@@ -189,9 +181,13 @@ class PatchApplicator:
 
             if not verification["verified"]:
                 result["error"] = "Verification failed: " + (
-                    "File not found" if not verification["file_exists"]
-                    else "Syntax error" if not verification["syntax_valid"]
-                    else "Unknown verification error"
+                    "File not found"
+                    if not verification["file_exists"]
+                    else (
+                        "Syntax error"
+                        if not verification["syntax_valid"]
+                        else "Unknown verification error"
+                    )
                 )
                 result["applied"] = False
 

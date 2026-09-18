@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 """Tests for CLI interface (Task 8.1)."""
 
 import json
@@ -150,19 +152,16 @@ class TestRunCommand:
         # Mock file existence
         mock_issue_path = Mock()
         mock_issue_path.exists.return_value = True
-        mock_issue_path.read_text.return_value = json.dumps({
-            "issue_id": "test-123",
-            "title": "Test Issue",
-            "body": "Test body"
-        })
+        mock_issue_path.read_text.return_value = json.dumps(
+            {"issue_id": "test-123", "title": "Test Issue", "body": "Test body"}
+        )
         mock_path.return_value = mock_issue_path
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.run.return_value = {
-            "status": "success",
-            "session_id": "test-session"
-        }
+        mock_orch_instance.run.return_value = SimpleNamespace(
+            status="success", session_id="test-session", final_patch=None
+        )
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args
@@ -248,7 +247,9 @@ class TestRunCommand:
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.run.return_value = {"status": "success"}
+        mock_orch_instance.run.return_value = SimpleNamespace(
+            status="success", session_id="test-session", final_patch=None
+        )
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args
@@ -277,7 +278,9 @@ class TestRunCommand:
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.run.return_value = {"status": "success"}
+        mock_orch_instance.run.return_value = SimpleNamespace(
+            status="success", session_id="test-session", final_patch=None
+        )
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args with timeout
@@ -370,7 +373,8 @@ class TestResumeCommand:
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.resume.return_value = {"status": "success"}
+        mock_orch_instance.run.return_value = SimpleNamespace(status="success", final_patch=None)
+        mock_orchestrator.resume.return_value = mock_orch_instance
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args
@@ -381,7 +385,8 @@ class TestResumeCommand:
         exit_code = resume_command(args)
 
         assert exit_code == 0
-        mock_orch_instance.resume.assert_called_once_with("test-run-123")
+        mock_orchestrator.resume.assert_called_once_with("test-run-123", mock_store_instance)
+        mock_orch_instance.run.assert_called_once()
 
     @patch("swe_agent.cli.StateStore")
     def test_resume_command_with_invalid_run_id(self, mock_store):
@@ -415,7 +420,7 @@ class TestResumeCommand:
 
         # Mock orchestrator to raise KeyboardInterrupt
         mock_orch_instance = Mock()
-        mock_orch_instance.resume.side_effect = KeyboardInterrupt()
+        mock_orchestrator.resume.side_effect = KeyboardInterrupt()
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args
@@ -443,16 +448,11 @@ class TestStatusCommand:
             session_id="test-run",
             status="running",
             current_stage="localization",
-            stages={
-                "localization": StageStatus(
-                    status="running",
-                    retries=0
-                )
-            },
+            stages={"localization": StageStatus(status="running", retries=0)},
             retry_count=0,
             max_retries=3,
             started_at="2024-01-01T00:00:00Z",
-            updated_at="2024-01-01T00:01:00Z"
+            updated_at="2024-01-01T00:01:00Z",
         )
         mock_store.return_value = mock_store_instance
 
@@ -500,18 +500,16 @@ class TestStatusCommand:
                     started_at="2024-01-01T00:00:00Z",
                     completed_at="2024-01-01T00:02:00Z",
                     duration=120.0,
-                    retries=0
+                    retries=0,
                 ),
                 "reproduction": StageStatus(
-                    status="running",
-                    started_at="2024-01-01T00:02:00Z",
-                    retries=1
-                )
+                    status="running", started_at="2024-01-01T00:02:00Z", retries=1
+                ),
             },
             retry_count=0,
             max_retries=3,
             started_at="2024-01-01T00:00:00Z",
-            updated_at="2024-01-01T00:02:30Z"
+            updated_at="2024-01-01T00:02:30Z",
         )
         mock_store.return_value = mock_store_instance
 
@@ -556,20 +554,20 @@ class TestListCommand:
                 "session_id": "run-1",
                 "status": "success",
                 "started_at": "2024-01-01T00:00:00Z",
-                "completed_at": "2024-01-01T00:10:00Z"
+                "completed_at": "2024-01-01T00:10:00Z",
             },
             {
                 "session_id": "run-2",
                 "status": "running",
                 "started_at": "2024-01-01T01:00:00Z",
-                "completed_at": None
+                "completed_at": None,
             },
             {
                 "session_id": "run-3",
                 "status": "failed",
                 "started_at": "2024-01-01T02:00:00Z",
-                "completed_at": "2024-01-01T02:05:00Z"
-            }
+                "completed_at": "2024-01-01T02:05:00Z",
+            },
         ]
         mock_store.return_value = mock_store_instance
 
@@ -592,7 +590,7 @@ class TestListCommand:
                 "session_id": "test-run",
                 "status": "success",
                 "started_at": "2024-01-01T00:00:00Z",
-                "completed_at": "2024-01-01T00:10:00Z"
+                "completed_at": "2024-01-01T00:10:00Z",
             }
         ]
         mock_store.return_value = mock_store_instance
@@ -644,7 +642,9 @@ class TestVerboseOutput:
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.run.return_value = {"status": "success"}
+        mock_orch_instance.run.return_value = SimpleNamespace(
+            status="success", session_id="test-session", final_patch=None
+        )
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args with verbose
@@ -687,7 +687,9 @@ class TestOutputDirectory:
 
         # Mock orchestrator
         mock_orch_instance = Mock()
-        mock_orch_instance.run.return_value = {"status": "success"}
+        mock_orch_instance.run.return_value = SimpleNamespace(
+            status="success", session_id="test-session", final_patch=None
+        )
         mock_orchestrator.return_value = mock_orch_instance
 
         # Create mock args

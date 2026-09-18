@@ -30,6 +30,7 @@ class SearchCandidate:
         code_snippet: Relevant code snippet from the file
         line_number: Specific line number if available
     """
+
     file_path: str
     confidence: float
     reason: str
@@ -204,25 +205,61 @@ class ErrorMessageStrategy:
         keywords.extend(quoted_matches)
 
         # Pattern 2: Class names (PascalCase)
-        class_pattern = r'\b([A-Z][a-zA-Z0-9]+)\b'
+        class_pattern = r"\b([A-Z][a-zA-Z0-9]+)\b"
         class_matches = re.findall(class_pattern, error_message)
         keywords.extend(class_matches)
 
         # Pattern 3: Function/method names (snake_case or camelCase with underscores)
-        func_pattern = r'\b([a-z_][a-z0-9_]{2,})\b'
+        func_pattern = r"\b([a-z_][a-z0-9_]{2,})\b"
         func_matches = re.findall(func_pattern, error_message)
         keywords.extend(func_matches)
 
         # Filter out common error type names and generic words
         stopwords = {
-            'Error', 'Exception', 'Type', 'Value', 'Attribute', 'Index',
-            'Key', 'Name', 'Runtime', 'Syntax', 'None', 'True', 'False',
-            'object', 'attribute', 'module', 'function', 'method', 'class',
-            'list', 'dict', 'int', 'str', 'float', 'bool',
-            'the', 'and', 'for', 'not', 'has', 'from', 'import',
-            'index', 'out', 'range', 'read', 'property',
-            'NoneType', 'AttributeError', 'TypeError', 'ValueError',
-            'IndexError', 'KeyError', 'NameError',
+            "Error",
+            "Exception",
+            "Type",
+            "Value",
+            "Attribute",
+            "Index",
+            "Key",
+            "Name",
+            "Runtime",
+            "Syntax",
+            "None",
+            "True",
+            "False",
+            "object",
+            "attribute",
+            "module",
+            "function",
+            "method",
+            "class",
+            "list",
+            "dict",
+            "int",
+            "str",
+            "float",
+            "bool",
+            "the",
+            "and",
+            "for",
+            "not",
+            "has",
+            "from",
+            "import",
+            "index",
+            "out",
+            "range",
+            "read",
+            "property",
+            "NoneType",
+            "AttributeError",
+            "TypeError",
+            "ValueError",
+            "IndexError",
+            "KeyError",
+            "NameError",
         }
 
         filtered = [k for k in keywords if k not in stopwords and len(k) > 2]
@@ -401,24 +438,53 @@ class SymbolSearchStrategy:
         symbols.extend(quoted_matches)
 
         # Pattern 2: Class names (PascalCase)
-        class_pattern = r'\b([A-Z][a-zA-Z0-9]+)\b'
+        class_pattern = r"\b([A-Z][a-zA-Z0-9]+)\b"
         class_matches = re.findall(class_pattern, error_message)
         symbols.extend(class_matches)
 
         # Pattern 3: Function names (snake_case or lowercase with underscores)
-        func_pattern = r'\b([a-z_][a-z0-9_]{2,})\b'
+        func_pattern = r"\b([a-z_][a-z0-9_]{2,})\b"
         func_matches = re.findall(func_pattern, error_message)
         symbols.extend(func_matches)
 
         # Filter common words
         stopwords = {
-            'Error', 'Exception', 'Type', 'Value', 'Attribute', 'Index',
-            'Key', 'Name', 'Runtime', 'Syntax', 'None', 'True', 'False',
-            'NoneType', 'TypeError', 'ValueError', 'AttributeError',
-            'IndexError', 'KeyError', 'NameError',
-            'object', 'has', 'attribute', 'class', 'throws', 'exception',
-            'the', 'and', 'for', 'not', 'from', 'import', 'function',
-            'method', 'property', 'module',
+            "Error",
+            "Exception",
+            "Type",
+            "Value",
+            "Attribute",
+            "Index",
+            "Key",
+            "Name",
+            "Runtime",
+            "Syntax",
+            "None",
+            "True",
+            "False",
+            "NoneType",
+            "TypeError",
+            "ValueError",
+            "AttributeError",
+            "IndexError",
+            "KeyError",
+            "NameError",
+            "object",
+            "has",
+            "attribute",
+            "class",
+            "throws",
+            "exception",
+            "the",
+            "and",
+            "for",
+            "not",
+            "from",
+            "import",
+            "function",
+            "method",
+            "property",
+            "module",
         }
 
         filtered = [s for s in symbols if s not in stopwords and len(s) > 2]
@@ -520,9 +586,7 @@ class SearchResultRanker:
     """
 
     def rank(
-        self,
-        candidates: List[SearchCandidate],
-        parsed_issue: Dict[str, Any]
+        self, candidates: List[SearchCandidate], parsed_issue: Dict[str, Any]
     ) -> List[SearchCandidate]:
         """Rank candidates by applying various scoring factors.
 
@@ -551,9 +615,7 @@ class SearchResultRanker:
                 logger.debug("stack_trace_bonus", file=candidate.file_path)
 
             # Bonus for keyword density
-            keyword_boost = self._calculate_keyword_boost(
-                candidate, error_keywords
-            )
+            keyword_boost = self._calculate_keyword_boost(candidate, error_keywords)
             adjusted_confidence = min(adjusted_confidence + keyword_boost, 0.95)
 
             # Penalty for test files
@@ -616,24 +678,28 @@ class SearchResultRanker:
         keywords = []
         for error in parsed_issue.get("error_messages", []):
             # Extract identifiers
-            pattern = r'\b([a-zA-Z_][a-zA-Z0-9_]{2,})\b'
+            pattern = r"\b([a-zA-Z_][a-zA-Z0-9_]{2,})\b"
             matches = re.findall(pattern, error)
             keywords.extend(matches)
 
         # Filter common words
         stopwords = {
-            'Error', 'Exception', 'Type', 'Value', 'Attribute',
-            'object', 'attribute', 'None', 'True', 'False',
+            "Error",
+            "Exception",
+            "Type",
+            "Value",
+            "Attribute",
+            "object",
+            "attribute",
+            "None",
+            "True",
+            "False",
         }
 
         filtered = [k for k in keywords if k not in stopwords]
         return list(dict.fromkeys(filtered))
 
-    def _calculate_keyword_boost(
-        self,
-        candidate: SearchCandidate,
-        keywords: List[str]
-    ) -> float:
+    def _calculate_keyword_boost(self, candidate: SearchCandidate, keywords: List[str]) -> float:
         """Calculate confidence boost based on keyword matches.
 
         Args:
@@ -670,7 +736,7 @@ class SearchResultRanker:
             True if test file
         """
         path_lower = file_path.lower()
-        test_indicators = ['test_', '_test.', '/tests/', '\\tests\\', 'spec.']
+        test_indicators = ["test_", "_test.", "/tests/", "\\tests\\", "spec."]
         return any(indicator in path_lower for indicator in test_indicators)
 
     def _deduplicate(self, candidates: List[SearchCandidate]) -> List[SearchCandidate]:

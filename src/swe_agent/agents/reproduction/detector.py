@@ -94,6 +94,9 @@ class ProjectTypeDetector:
                     "indicators": found_indicators,
                 }
 
+        if any(self.directory.glob("*.py")):
+            return {"project_type": "python", "indicators": ["*.py"]}
+
         # No matches found
         logger.debug("project_type_unknown", directory=str(self.directory))
         return {
@@ -380,8 +383,9 @@ class TestCommandInferrer:
     def _infer_java_command(self) -> Dict[str, Any]:
         """Infer Java test command."""
         # Check for Gradle
-        if (self.directory / "build.gradle").exists() or \
-           (self.directory / "build.gradle.kts").exists():
+        if (self.directory / "build.gradle").exists() or (
+            self.directory / "build.gradle.kts"
+        ).exists():
             # Check for gradlew wrapper
             if (self.directory / "gradlew").exists():
                 return {
@@ -527,9 +531,12 @@ class DependencyInstallDetector:
             }
 
         # Gradle project
-        if (self.directory / "build.gradle").exists() or \
-           (self.directory / "build.gradle.kts").exists():
-            install_cmd = "./gradlew build" if (self.directory / "gradlew").exists() else "gradle build"
+        if (self.directory / "build.gradle").exists() or (
+            self.directory / "build.gradle.kts"
+        ).exists():
+            install_cmd = (
+                "./gradlew build" if (self.directory / "gradlew").exists() else "gradle build"
+            )
             return {
                 "needs_install": True,
                 "reason": "gradle_project",

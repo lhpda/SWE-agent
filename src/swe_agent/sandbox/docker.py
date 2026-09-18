@@ -6,7 +6,7 @@ Provides secure, resource-limited containers for running tests and commands.
 
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Dict, List, Optional, Any
 import docker
 from docker.errors import DockerException, NotFound, APIError, ImageNotFound
@@ -90,7 +90,7 @@ class DockerSandbox:
                 network = self.client.networks.create(
                     name=network_name,
                     driver="bridge",
-                    internal=False,  # Allow outbound but restrict via firewall rules
+                    internal=True,
                     labels={
                         "swe-agent.session": self.session_id,
                         "swe-agent.created": datetime.utcnow().isoformat(),
@@ -112,7 +112,11 @@ class DockerSandbox:
             volumes = {work_dir: {"bind": "/workspace", "mode": "rw"}}
 
             # Prepare environment variables
-            container_env = env or {}
+            container_env = dict(env or {})
+            container_env.setdefault("HOME", "/tmp")
+            container_env.setdefault("PYTHONUSERBASE", "/tmp/python-user")
+            container_env.setdefault("PIP_USER", "1")
+            container_env.setdefault("PYTHONDONTWRITEBYTECODE", "1")
             container_env["SWE_AGENT_SESSION"] = self.session_id
 
             # Create container with resource limits and security settings
@@ -148,9 +152,8 @@ class DockerSandbox:
             )
 
             # Start the container
-            container.start()
-
             self.container_id = container.id
+            container.start()
             self.created_at = datetime.utcnow()
 
             logger.info(
@@ -165,6 +168,7 @@ class DockerSandbox:
         except Exception as e:
             logger.error("container_creation_failed", error=str(e), session_id=self.session_id)
             # Cleanup on failure
+            self.destroy()
             self._cleanup_network()
             raise
 
@@ -198,8 +202,14 @@ class DockerSandbox:
             container = self.client.containers.get(self.container_id)
 
             # Execute command with timeout
+            import shlex
+
             exec_result = container.exec_run(
-                cmd=["sh", "-c", command],
+                cmd=[
+                    "sh",
+                    "-c",
+                    f"timeout --signal=TERM --kill-after=2s {timeout}s sh -c {shlex.quote(command)}",
+                ],
                 demux=True,
                 environment=None,
             )
@@ -207,7 +217,7 @@ class DockerSandbox:
             execution_time = time.time() - start_time
 
             # Check if execution exceeded timeout (approximate check)
-            if execution_time > timeout:
+            if exec_result.exit_code in (124, 137) or execution_time > timeout:
                 logger.warning(
                     "command_timeout",
                     session_id=self.session_id,
@@ -302,50 +312,54 @@ class DockerSandbox:
 
     def _copy_to_container(self, container, src: str, dst: str) -> None:
         """Copy file from host to container."""
-        import tarfile
-        import io
+        import base64
 
         src_path = Path(src)
         if not src_path.exists():
             raise FileNotFoundError(f"Source file not found: {src}")
 
-        # Create tar archive in memory
-        tar_stream = io.BytesIO()
-        with tarfile.open(fileobj=tar_stream, mode="w") as tar:
-            tar.add(src, arcname=Path(dst).name)
-        tar_stream.seek(0)
-
-        # Extract destination directory
-        dst_dir = str(Path(dst).parent)
-
-        # Put archive into container
-        container.put_archive(dst_dir, tar_stream)
+        # exec sees mounted tmpfs; Docker archive APIs may only see the underlying rootfs.
+        result = container.exec_run(
+            [
+                "python",
+                "-c",
+                "from pathlib import Path; import sys; Path(sys.argv[1]).write_bytes(b'')",
+                dst,
+            ]
+        )
+        if result.exit_code:
+            raise RuntimeError(result.output.decode("utf-8", errors="replace"))
+        with src_path.open("rb") as stream:
+            while chunk := stream.read(32768):
+                result = container.exec_run(
+                    [
+                        "python",
+                        "-c",
+                        "import base64,sys; open(sys.argv[1],'ab').write(base64.b64decode(sys.argv[2]))",
+                        dst,
+                        base64.b64encode(chunk).decode("ascii"),
+                    ]
+                )
+                if result.exit_code:
+                    raise RuntimeError(result.output.decode("utf-8", errors="replace"))
 
         logger.debug("file_copied_to_container", src=src, dst=dst)
 
     def _copy_from_container(self, container, src: str, dst: str) -> None:
         """Copy file from container to host."""
-        import tarfile
-        import io
-
-        # Get file from container as tar archive
-        bits, stat = container.get_archive(src)
-
-        # Extract from tar
-        tar_stream = io.BytesIO()
-        for chunk in bits:
-            tar_stream.write(chunk)
-        tar_stream.seek(0)
-
-        with tarfile.open(fileobj=tar_stream, mode="r") as tar:
-            # Extract the file
-            member = tar.getmembers()[0]
-            file_obj = tar.extractfile(member)
-
-            if file_obj:
-                dst_path = Path(dst)
-                dst_path.parent.mkdir(parents=True, exist_ok=True)
-                dst_path.write_bytes(file_obj.read())
+        result = container.exec_run(
+            [
+                "python",
+                "-c",
+                "import pathlib,sys; sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())",
+                src,
+            ]
+        )
+        if result.exit_code:
+            raise RuntimeError(result.output.decode("utf-8", errors="replace"))
+        dst_path = Path(dst)
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        dst_path.write_bytes(result.output)
 
         logger.debug("file_copied_from_container", src=src, dst=dst)
 

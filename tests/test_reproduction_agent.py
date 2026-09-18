@@ -60,9 +60,7 @@ class TestReproductionAgentInit:
 
     def test_init_with_custom_max_attempts(self, localization_result, repo_context, mock_sandbox):
         """Test initialization with custom max attempts."""
-        agent = ReproductionAgent(
-            localization_result, repo_context, mock_sandbox, max_attempts=3
-        )
+        agent = ReproductionAgent(localization_result, repo_context, mock_sandbox, max_attempts=3)
 
         assert agent.max_attempts == 3
 
@@ -70,11 +68,15 @@ class TestReproductionAgentInit:
 class TestProjectDetection:
     """Test project type and framework detection."""
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
     def test_detect_project_python_pytest(
-        self, mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test detection of Python project with pytest."""
         # Setup mocks
@@ -95,11 +97,15 @@ class TestProjectDetection:
         mock_type_detector.assert_called_once_with(repo_context.path)
         mock_framework_detector.assert_called_once()
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
     def test_detect_project_nodejs_jest(
-        self, mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test detection of Node.js project with jest."""
         mock_type_detector.return_value.detect.return_value = {
@@ -121,7 +127,7 @@ class TestProjectDetection:
 class TestDependencyInstallation:
     """Test dependency installation."""
 
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_install_dependencies_not_needed(
         self, mock_dep_detector, localization_result, repo_context, mock_sandbox
     ):
@@ -140,7 +146,7 @@ class TestDependencyInstallation:
         assert result["reason"] == "node_modules_exists"
         mock_sandbox.execute.assert_not_called()
 
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_install_dependencies_success(
         self, mock_dep_detector, localization_result, repo_context, mock_sandbox
     ):
@@ -166,7 +172,7 @@ class TestDependencyInstallation:
         assert result["execution_time"] == 10.5
         mock_sandbox.execute.assert_called_once()
 
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_install_dependencies_failure(
         self, mock_dep_detector, localization_result, repo_context, mock_sandbox
     ):
@@ -195,7 +201,7 @@ class TestDependencyInstallation:
 class TestRunTests:
     """Test test execution in sandbox."""
 
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
     def test_run_tests_success(
         self, mock_cmd_inferrer, localization_result, repo_context, mock_sandbox
     ):
@@ -221,7 +227,7 @@ class TestRunTests:
         assert result["execution_time"] == 3.5
         assert "test_function FAILED" in result["stdout"]
 
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
     def test_run_tests_with_fallback_commands(
         self, mock_cmd_inferrer, localization_result, repo_context, mock_sandbox
     ):
@@ -261,7 +267,7 @@ class TestRunTests:
 class TestAnalyzeResults:
     """Test result analysis."""
 
-    @patch('swe_agent.agents.reproduction.agent.LogAnalyzer')
+    @patch("swe_agent.agents.reproduction.agent.LogAnalyzer")
     def test_analyze_results_reproduced(
         self, mock_log_analyzer, localization_result, repo_context, mock_sandbox
     ):
@@ -288,7 +294,7 @@ class TestAnalyzeResults:
         assert result["root_cause"]["file"] == "src/calculator.py"
         assert result["root_cause"]["line"] == 42
 
-    @patch('swe_agent.agents.reproduction.agent.LogAnalyzer')
+    @patch("swe_agent.agents.reproduction.agent.LogAnalyzer")
     def test_analyze_results_not_reproduced(
         self, mock_log_analyzer, localization_result, repo_context, mock_sandbox
     ):
@@ -300,7 +306,7 @@ class TestAnalyzeResults:
 
         assert result["status"] == "not_reproduced"
 
-    @patch('swe_agent.agents.reproduction.agent.LogAnalyzer')
+    @patch("swe_agent.agents.reproduction.agent.LogAnalyzer")
     def test_analyze_results_with_stack_trace(
         self, mock_log_analyzer, localization_result, repo_context, mock_sandbox
     ):
@@ -330,15 +336,21 @@ class TestAnalyzeResults:
 class TestReproductionAgentRun:
     """Test main run() method."""
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
-    @patch('swe_agent.agents.reproduction.agent.LogAnalyzer')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
+    @patch("swe_agent.agents.reproduction.agent.LogAnalyzer")
     def test_run_successful_reproduction(
-        self, mock_log_analyzer, mock_dep_detector, mock_cmd_inferrer,
-        mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_log_analyzer,
+        mock_dep_detector,
+        mock_cmd_inferrer,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test successful error reproduction flow."""
         # Setup all mocks
@@ -388,14 +400,19 @@ class TestReproductionAgentRun:
         assert result.execution_time > 0
         assert result.attempts == 1
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_run_not_reproduced(
-        self, mock_dep_detector, mock_cmd_inferrer,
-        mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_dep_detector,
+        mock_cmd_inferrer,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test when error cannot be reproduced."""
         mock_type_detector.return_value.detect.return_value = {
@@ -433,14 +450,19 @@ class TestReproductionAgentRun:
         assert result.status == "not_reproduced"
         assert result.root_cause is None
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_run_with_retry_strategy(
-        self, mock_dep_detector, mock_cmd_inferrer,
-        mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_dep_detector,
+        mock_cmd_inferrer,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test retry strategy with multiple attempts."""
         mock_type_detector.return_value.detect.return_value = {
@@ -486,14 +508,19 @@ class TestReproductionAgentRun:
         assert result.attempts >= 1
         assert mock_sandbox.execute.call_count >= 1
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_run_execution_time_constraint(
-        self, mock_dep_detector, mock_cmd_inferrer,
-        mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_dep_detector,
+        mock_cmd_inferrer,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test that execution completes within time constraint (< 8 minutes simulated)."""
         mock_type_detector.return_value.detect.return_value = {
@@ -529,14 +556,19 @@ class TestReproductionAgentRun:
         # Simulated execution should be fast (< 8 minutes = 480 seconds)
         assert result.execution_time < 480
 
-    @patch('swe_agent.agents.reproduction.agent.ProjectTypeDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestFrameworkDetector')
-    @patch('swe_agent.agents.reproduction.agent.TestCommandInferrer')
-    @patch('swe_agent.agents.reproduction.agent.DependencyInstallDetector')
+    @patch("swe_agent.agents.reproduction.agent.ProjectTypeDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestFrameworkDetector")
+    @patch("swe_agent.agents.reproduction.agent.TestCommandInferrer")
+    @patch("swe_agent.agents.reproduction.agent.DependencyInstallDetector")
     def test_run_with_dependency_installation(
-        self, mock_dep_detector, mock_cmd_inferrer,
-        mock_framework_detector, mock_type_detector,
-        localization_result, repo_context, mock_sandbox
+        self,
+        mock_dep_detector,
+        mock_cmd_inferrer,
+        mock_framework_detector,
+        mock_type_detector,
+        localization_result,
+        repo_context,
+        mock_sandbox,
     ):
         """Test flow with dependency installation."""
         mock_type_detector.return_value.detect.return_value = {

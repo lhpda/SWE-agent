@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+RUN pip install --no-cache-dir pytest==8.3.5
+ENV HOME=/tmp \
+    PYTHONUSERBASE=/tmp/python-user \
+    PATH=/tmp/python-user/bin:$PATH \
+    PIP_USER=1 \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /workspace
+USER nobody
+CMD ["tail", "-f", "/dev/null"]

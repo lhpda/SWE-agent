@@ -10,8 +10,8 @@ Tests verify parsing of various Issue formats including:
 
 import pytest
 
-from src.swe_agent.agents.localization.parser import IssueParser
-from src.swe_agent.types import IssueContext
+from swe_agent.agents.localization.parser import IssueParser
+from swe_agent.types import IssueContext
 
 
 class TestIssueParserBasic:
@@ -169,8 +169,10 @@ obj.process()  # Fails here
 
         assert "reproduction_steps" in result.parsed
         assert len(result.parsed["reproduction_steps"]) > 0
-        assert any("import" in step.lower() or "python" in step.lower()
-                  for step in result.parsed["reproduction_steps"])
+        assert any(
+            "import" in step.lower() or "python" in step.lower()
+            for step in result.parsed["reproduction_steps"]
+        )
 
     def test_extract_mixed_reproduction_steps(self):
         """Test extracting reproduction steps with mixed formats."""
@@ -223,8 +225,7 @@ The result should be 42, but got 0 instead.
         result = parser.parse(issue_markdown)
 
         # Should extract some form of expected/actual
-        assert ("expected_behavior" in result.parsed or
-                "actual_behavior" in result.parsed)
+        assert "expected_behavior" in result.parsed or "actual_behavior" in result.parsed
 
     def test_extract_expected_vs_actual_table(self):
         """Test extracting expected vs actual from comparison."""
@@ -255,8 +256,10 @@ The app doesn't work properly. Sometimes it crashes.
         assert isinstance(result, IssueContext)
         assert result.parsed["stack_traces"] == []
         assert len(result.parsed["error_messages"]) == 0
-        assert "vague" in result.parsed.get("quality", "").lower() or \
-               result.parsed.get("confidence", 1.0) < 0.5
+        assert (
+            "vague" in result.parsed.get("quality", "").lower()
+            or result.parsed.get("confidence", 1.0) < 0.5
+        )
 
     def test_parse_minimal_issue(self):
         """Test parsing minimal Issue with little information."""

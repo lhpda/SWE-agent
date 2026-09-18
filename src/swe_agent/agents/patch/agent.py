@@ -8,7 +8,9 @@ Task 5.4: PatchGeneratorAgent 实现与集成测试
 3. 验证补丁语法（SyntaxValidator）
 4. 排序并返回最优补丁
 """
+
 import time
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from .context_builder import ContextBuilder
@@ -23,7 +25,8 @@ class PatchGeneratorAgent:
         self,
         localization_result: Dict[str, Any],
         reproduction_result: Dict[str, Any],
-        repo_context: Dict[str, Any]
+        repo_context: Dict[str, Any],
+        config=None,
     ):
         """
         初始化 PatchGeneratorAgent
@@ -39,7 +42,7 @@ class PatchGeneratorAgent:
 
         # 初始化组件
         self.context_builder = ContextBuilder()
-        self.patch_generator = PatchGenerator()
+        self.patch_generator = PatchGenerator(config=config)
         self.syntax_validator = SyntaxValidator()
 
     def run(self) -> Dict[str, Any]:
@@ -58,17 +61,20 @@ class PatchGeneratorAgent:
 
         try:
             # 获取候选文件列表
-            candidates = self.localization_result.get('candidates', [])
+            candidates = self.localization_result.get("candidates", [])
 
             if not candidates:
                 return self._create_failed_result(start_time, "No candidates found")
 
             # 为每个候选文件生成补丁
             all_patches = []
+            errors = []
 
             for candidate in candidates:
-                file_path = candidate.get('file_path')
-                focus_lines = candidate.get('lines', [])
+                file_path = candidate.get("file_path")
+                focus_lines = candidate.get("lines", []) or (
+                    [candidate["line_number"]] if candidate.get("line_number") else []
+                )
 
                 if not file_path:
                     continue
@@ -76,18 +82,35 @@ class PatchGeneratorAgent:
                 try:
                     # 1. 构建代码上下文
                     context = self._build_context(file_path, focus_lines)
+                    context["issue_body"] = self.repo_context.get("issue_body", "")
 
                     # 2. 生成多个候选补丁
                     patches = self._generate_patches(context)
 
                     # 3. 验证补丁
                     valid_patches = self._validate_patches(patches)
+                    for item in valid_patches:
+                        if "modified_code" in item:
+                            relative = (
+                                Path(item["file_path"])
+                                .resolve()
+                                .relative_to(Path(self.repo_context["path"]).resolve())
+                                .as_posix()
+                            )
+                            item["file_path"] = relative
+                            item["unified_diff"] = self.patch_generator.format_as_unified_diff(
+                                item["original_code"], item["modified_code"], relative
+                            )
 
                     # 收集所有有效补丁
                     all_patches.extend(valid_patches)
 
                 except Exception as e:
-                    # 单个候选文件失败不影响其他候选
+                    if getattr(e, "status_code", None) in (401, 403):
+                        raise PermissionError(
+                            "Model credentials rejected; update the provider API key in .env"
+                        ) from e
+                    errors.append(str(e))
                     continue
 
             # 4. 排序所有补丁
@@ -97,15 +120,19 @@ class PatchGeneratorAgent:
             if ranked_patches:
                 execution_time = time.time() - start_time
                 return {
-                    'status': 'generated',
-                    'patches': ranked_patches,
-                    'best_patch': ranked_patches[0],
-                    'generation_strategy': 'beam_search',
-                    'execution_time': execution_time
+                    "status": "generated",
+                    "patches": ranked_patches,
+                    "best_patch": ranked_patches[0],
+                    "generation_strategy": "beam_search",
+                    "execution_time": execution_time,
                 }
             else:
-                return self._create_failed_result(start_time, "No valid patches generated")
+                return self._create_failed_result(
+                    start_time, "; ".join(errors) or "No valid patches generated"
+                )
 
+        except PermissionError:
+            raise
         except Exception as e:
             return self._create_failed_result(start_time, str(e))
 
@@ -120,7 +147,16 @@ class PatchGeneratorAgent:
         Returns:
             上下文字典
         """
-        return self.context_builder.build_context(file_path, focus_lines)
+        root = Path(self.repo_context["path"]).resolve()
+        path = (root / file_path).resolve()
+        if not path.is_relative_to(root):
+            raise ValueError("Candidate file is outside repository")
+        original = path.read_text(encoding="utf-8")
+        if len(original) > self.patch_generator.config.max_file_size:
+            raise ValueError("Candidate file exceeds configured size limit")
+        context = self.context_builder.build_context(str(path), focus_lines or [1])
+        context["original_code"] = original
+        return context
 
     def _generate_patches(self, context: Dict[str, Any], n: int = 3) -> List[Dict[str, Any]]:
         """
@@ -133,15 +169,10 @@ class PatchGeneratorAgent:
         Returns:
             补丁列表
         """
-        root_cause = self.reproduction_result.get('root_cause', {})
-        error_info = self.reproduction_result.get('error_details', {})
+        root_cause = self.reproduction_result.get("root_cause") or {}
+        error_info = self.reproduction_result.get("error_details") or {}
 
-        return self.patch_generator.generate_multiple_patches(
-            context,
-            root_cause,
-            error_info,
-            n=n
-        )
+        return self.patch_generator.generate_multiple_patches(context, root_cause, error_info, n=n)
 
     def _validate_patches(self, patches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -159,23 +190,19 @@ class PatchGeneratorAgent:
         valid_patches = []
 
         for patch in patches:
-            file_path = patch.get('file_path')
-            unified_diff = patch.get('unified_diff', '')
+            file_path = patch.get("file_path")
+            unified_diff = patch.get("unified_diff", "")
 
             # 调用 SyntaxValidator 验证
             validation_result = self.syntax_validator.validate_patch_application(
-                file_path,
-                unified_diff
+                file_path, patch.get("modified_code", unified_diff)
             )
 
             # 添加验证结果到补丁
-            patch_with_validation = {
-                **patch,
-                'validation': validation_result
-            }
+            patch_with_validation = {**patch, "validation": validation_result}
 
             # 只保留有效的补丁
-            if validation_result.get('is_valid', False):
+            if validation_result.get("is_valid", False):
                 valid_patches.append(patch_with_validation)
 
         return valid_patches
@@ -190,7 +217,7 @@ class PatchGeneratorAgent:
         Returns:
             排序后的补丁列表（置信度降序）
         """
-        return sorted(patches, key=lambda p: p.get('confidence', 0.0), reverse=True)
+        return sorted(patches, key=lambda p: p.get("confidence", 0.0), reverse=True)
 
     def _create_failed_result(self, start_time: float, reason: str) -> Dict[str, Any]:
         """
@@ -205,9 +232,10 @@ class PatchGeneratorAgent:
         """
         execution_time = time.time() - start_time
         return {
-            'status': 'failed',
-            'patches': [],
-            'best_patch': None,
-            'generation_strategy': 'beam_search',
-            'execution_time': execution_time
+            "status": "failed",
+            "patches": [],
+            "best_patch": None,
+            "generation_strategy": "beam_search",
+            "execution_time": execution_time,
+            "error": reason,
         }

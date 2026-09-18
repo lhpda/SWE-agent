@@ -21,10 +21,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Fix Windows console encoding
+if sys.platform == "win32":
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
 from swe_agent.config import Config, load_config
 from swe_agent.logging import get_logger
 from swe_agent.storage import StateStore
-from swe_agent.types import PipelineState
+from swe_agent.types import PipelineState, IssueContext, RepositoryContext
+from swe_agent.orchestrator.pipeline import PipelineOrchestrator
 
 logger = get_logger(__name__)
 
@@ -32,53 +39,6 @@ logger = get_logger(__name__)
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 EXIT_INTERRUPTED = 2
-
-
-class PipelineOrchestrator:
-    """Placeholder for PipelineOrchestrator (Task 7.4).
-
-    This is a minimal stub to enable CLI development before Task 7.4 is complete.
-    """
-
-    def __init__(self, config: Optional[Config] = None, storage: Optional[StateStore] = None):
-        """Initialize orchestrator with config and storage."""
-        self.config = config or Config()
-        self.storage = storage or StateStore()
-
-    def run(self, issue_data: Dict[str, Any], **kwargs) -> Dict[str, Any]:
-        """Run pipeline on an issue.
-
-        Args:
-            issue_data: Issue context data
-            **kwargs: Additional options
-
-        Returns:
-            Result dictionary with status and session_id
-        """
-        raise NotImplementedError("PipelineOrchestrator.run() not yet implemented (Task 7.4)")
-
-    def resume(self, session_id: str, **kwargs) -> Dict[str, Any]:
-        """Resume a previous pipeline execution.
-
-        Args:
-            session_id: Session ID to resume
-            **kwargs: Additional options
-
-        Returns:
-            Result dictionary with status
-        """
-        raise NotImplementedError("PipelineOrchestrator.resume() not yet implemented (Task 7.4)")
-
-    def get_state(self, session_id: str) -> PipelineState:
-        """Get current state of a pipeline execution.
-
-        Args:
-            session_id: Session ID to query
-
-        Returns:
-            Current pipeline state
-        """
-        raise NotImplementedError("PipelineOrchestrator.get_state() not yet implemented (Task 7.4)")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -228,15 +188,15 @@ def load_config_file(config_path: Optional[str]) -> Config:
         config_file = Path(config_path)
         if not config_file.exists():
             print(f"Warning: Config file not found: {config_path}, using defaults", file=sys.stderr)
-            return Config()
+            return load_config()
 
         try:
             return load_config(config_path)
         except Exception as e:
             print(f"Warning: Failed to load config file: {e}, using defaults", file=sys.stderr)
-            return Config()
+            return load_config()
 
-    return Config()
+    return load_config()
 
 
 def print_progress(message: str, status: str = "info") -> None:
@@ -323,32 +283,86 @@ def run_command(args: argparse.Namespace) -> int:
             return EXIT_FAILURE
 
     # Initialize storage
-    storage = StateStore()
+    storage = StateStore(base_path=config.storage_base_path)
+
+    # Build IssueContext
+    try:
+        issue = IssueContext(
+            issue_id=str(issue_data.get("issue_number", "unknown")),
+            title=issue_data.get("title", ""),
+            body=issue_data.get("body", ""),
+            parsed=issue_data.get("code_context", {}),
+            metadata={
+                "labels": issue_data.get("labels", []),
+                "repo": issue_data.get("repo", ""),
+            },
+        )
+    except Exception as e:
+        print(f"Error: Failed to parse issue data: {e}", file=sys.stderr)
+        return EXIT_FAILURE
+
+    # Build RepositoryContext (use current directory as default)
+    try:
+        repo_path = str(Path(issue_data.get("repo_path", ".")).resolve())
+        if not Path(repo_path).is_dir():
+            raise ValueError(f"Repository directory does not exist: {repo_path}")
+        repository = RepositoryContext(
+            path=repo_path,
+            git={"branch": "main", "commit": "HEAD"},
+            project_type="python",
+            test_framework="pytest",
+            dependencies={},
+        )
+    except Exception as e:
+        print(f"Error: Failed to create repository context: {e}", file=sys.stderr)
+        return EXIT_FAILURE
 
     # Initialize orchestrator
     try:
-        orchestrator = PipelineOrchestrator(config=config, storage=storage)
+        orchestrator = PipelineOrchestrator(
+            issue=issue,
+            repository=repository,
+            state_store=storage,
+            global_timeout=config.global_timeout,
+            config=config,
+        )
     except Exception as e:
         print(f"Error: Failed to initialize orchestrator: {e}", file=sys.stderr)
+        import traceback
+
+        traceback.print_exc()
         return EXIT_FAILURE
 
     # Run pipeline
     try:
         print_progress("Starting SWE Agent pipeline", "info")
-        print_progress(f"Issue: {issue_data.get('title', 'N/A')}", "info")
+        print_progress(f"Issue: {issue.title}", "info")
+        print_progress(f"Session ID: {orchestrator.session_id}", "info")
 
-        result = orchestrator.run(issue_data, output_dir=args.output)
+        result = orchestrator.run()
 
-        if result.get("status") == "success":
+        if result.status == "success":
             print_progress("Pipeline completed successfully", "success")
-            print(f"\nSession ID: {result.get('session_id')}")
+            print(f"\nSession ID: {result.session_id}")
 
-            if args.output:
-                print(f"Output directory: {args.output}")
+            if result.final_patch:
+                print(f"Final patch generated")
+                output_dir = (
+                    Path(args.output)
+                    if args.output
+                    else storage.get_session_path(result.session_id)
+                )
+                patch_file = output_dir / "final_patch.diff"
+                patch_file.write_text(
+                    result.final_patch.get("unified_diff", ""), encoding="utf-8", newline=""
+                )
+                print(f"Patch saved to: {patch_file}")
 
             return EXIT_SUCCESS
         else:
             print_progress("Pipeline failed", "error")
+            if result.error:
+                print(f"Error: {result.error.message}")
             return EXIT_FAILURE
 
     except KeyboardInterrupt:
@@ -357,6 +371,9 @@ def run_command(args: argparse.Namespace) -> int:
     except Exception as e:
         print_progress(f"Pipeline error: {e}", "error")
         logger.exception("Unexpected error during pipeline execution")
+        import traceback
+
+        traceback.print_exc()
         return EXIT_FAILURE
 
 
@@ -372,31 +389,27 @@ def resume_command(args: argparse.Namespace) -> int:
     setup_logging(args.verbose)
 
     # Initialize storage
-    storage = StateStore()
+    storage = StateStore(base_path=load_config().storage_base_path)
 
     # Check if session exists
     if not storage.session_exists(args.run_id):
         print(f"Error: Run ID not found: {args.run_id}", file=sys.stderr)
         return EXIT_FAILURE
 
-    # Initialize orchestrator
-    try:
-        orchestrator = PipelineOrchestrator(storage=storage)
-    except Exception as e:
-        print(f"Error: Failed to initialize orchestrator: {e}", file=sys.stderr)
-        return EXIT_FAILURE
-
     # Resume pipeline
     try:
         print_progress(f"Resuming pipeline: {args.run_id}", "info")
 
-        result = orchestrator.resume(args.run_id)
+        orchestrator = PipelineOrchestrator.resume(args.run_id, storage)
+        result = orchestrator.run()
 
-        if result.get("status") == "success":
+        if result.status == "success":
             print_progress("Pipeline resumed and completed successfully", "success")
             return EXIT_SUCCESS
         else:
             print_progress("Pipeline failed", "error")
+            if result.error:
+                print(f"Error: {result.error.message}")
             return EXIT_FAILURE
 
     except KeyboardInterrupt:
@@ -418,7 +431,7 @@ def status_command(args: argparse.Namespace) -> int:
         Exit code
     """
     # Initialize storage
-    storage = StateStore()
+    storage = StateStore(base_path=load_config().storage_base_path)
 
     # Check if session exists
     if not storage.session_exists(args.run_id):
@@ -467,7 +480,7 @@ def list_command(args: argparse.Namespace) -> int:
         Exit code
     """
     # Initialize storage
-    storage = StateStore()
+    storage = StateStore(base_path=load_config().storage_base_path)
 
     # List all sessions
     try:
@@ -485,6 +498,15 @@ def list_command(args: argparse.Namespace) -> int:
 
         # Print sessions
         for session in sessions:
+            if isinstance(session, str):
+                metadata = storage.load_metadata(session) or {}
+                history = metadata.get("history", [])
+                session = {
+                    "session_id": session,
+                    "status": metadata.get("current_state", "unknown"),
+                    "started_at": history[0]["timestamp"] if history else "N/A",
+                    "completed_at": metadata.get("completed_at"),
+                }
             session_id = session.get("session_id", "N/A")
             status = session.get("status", "N/A")
             started = session.get("started_at", "N/A")

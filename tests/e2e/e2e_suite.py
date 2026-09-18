@@ -88,10 +88,7 @@ class E2ETestFramework:
         return test_cases
 
     def run_test_case(
-        self,
-        test_case: Dict[str, Any],
-        workspace_path: Path,
-        timeout: int = 600
+        self, test_case: Dict[str, Any], workspace_path: Path, timeout: int = 600
     ) -> Dict[str, Any]:
         """Execute a single test case through the pipeline.
 
@@ -143,6 +140,7 @@ class E2ETestFramework:
 
             # Create state store (mock for now)
             from unittest.mock import MagicMock
+
             mock_store = MagicMock()
             mock_store.create_session.return_value = workspace_path / "session"
 
@@ -317,27 +315,19 @@ class E2ETestFramework:
 
         # Validate simple bugs
         if "simple" in by_complexity:
-            criteria["simple_bugs"]["met"] = (
-                by_complexity["simple"]["success_rate"] >= 0.8
-            )
+            criteria["simple_bugs"]["met"] = by_complexity["simple"]["success_rate"] >= 0.8
 
         # Validate medium bugs
         if "medium" in by_complexity:
-            criteria["medium_bugs"]["met"] = (
-                by_complexity["medium"]["success_rate"] >= 0.6
-            )
+            criteria["medium_bugs"]["met"] = by_complexity["medium"]["success_rate"] >= 0.6
 
         # Validate complex bugs
         if "complex" in by_complexity:
-            criteria["complex_bugs"]["met"] = (
-                by_complexity["complex"]["success"] >= 1
-            )
+            criteria["complex_bugs"]["met"] = by_complexity["complex"]["success"] >= 1
 
         # Validate negative cases
         if "negative" in by_complexity:
-            criteria["negative_cases"]["met"] = (
-                by_complexity["negative"]["failed"] >= 1
-            )
+            criteria["negative_cases"]["met"] = by_complexity["negative"]["failed"] >= 1
 
         logger.info("success_criteria_validated", criteria=criteria)
         return criteria
@@ -615,7 +605,7 @@ class E2ETestFramework:
         # Add individual test results
         for result in results:
             status_class = f"status-{result['status']}"
-            error_text = result.get('error', '')[:100] if result.get('error') else '-'
+            error_text = result.get("error", "")[:100] if result.get("error") else "-"
 
             html_content += f"""
                 <tr>
@@ -637,7 +627,7 @@ class E2ETestFramework:
 """
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(html_content, encoding='utf-8')
+        output_path.write_text(html_content, encoding="utf-8")
 
 
 def run_e2e_suite(

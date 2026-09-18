@@ -108,11 +108,13 @@ class TestPatchApplication:
         validator = SyntaxValidator()
 
         # Create temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write("""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(
+                """
 def add(a, b):
     return a + b
-""")
+"""
+            )
             temp_path = f.name
 
         try:
@@ -131,11 +133,13 @@ def add(a, b):
         validator = SyntaxValidator()
 
         # Create temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write("""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(
+                """
 def add(a, b):
     return a + b
-""")
+"""
+            )
             temp_path = f.name
 
         try:

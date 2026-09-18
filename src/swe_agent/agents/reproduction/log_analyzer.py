@@ -31,7 +31,7 @@ class LogAnalyzer:
 
     JAVA_EXCEPTION_START = re.compile(
         r"^(?:Exception in thread \"[^\"]+\" )?(\w+(?:\.\w+)*(?:Exception|Error)): (.+)$",
-        re.MULTILINE
+        re.MULTILINE,
     )
     JAVA_STACK_LINE = re.compile(r"^\s+at (.+)\(([^:]+):(\d+)\)", re.MULTILINE)
 
@@ -170,9 +170,13 @@ class LogAnalyzer:
             # Check for Java exception line
             java_match = re.match(
                 r"^(?:Exception in thread \"[^\"]+\" )?(\w+(?:\.\w+)*(?:Exception|Error)): (.+)$",
-                line
+                line,
             )
-            if java_match or (line and "Exception" in line and "at " in self.log_content[self.log_content.find(line):]):
+            if java_match or (
+                line
+                and "Exception" in line
+                and "at " in self.log_content[self.log_content.find(line) :]
+            ):
                 trace_lines = [lines[i]]
                 i += 1
 

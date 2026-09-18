@@ -27,41 +27,31 @@ class SyntaxValidator:
             Validation result with is_valid, errors, line_numbers, error_type
         """
         if not code or code.strip() == "":
-            return {
-                "is_valid": True,
-                "errors": [],
-                "line_numbers": [],
-                "error_type": ""
-            }
+            return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
 
         try:
             ast.parse(code)
-            return {
-                "is_valid": True,
-                "errors": [],
-                "line_numbers": [],
-                "error_type": ""
-            }
+            return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
         except SyntaxError as e:
             return {
                 "is_valid": False,
                 "errors": [str(e)],
                 "line_numbers": [e.lineno] if e.lineno else [],
-                "error_type": "SyntaxError"
+                "error_type": "SyntaxError",
             }
         except IndentationError as e:
             return {
                 "is_valid": False,
                 "errors": [str(e)],
                 "line_numbers": [e.lineno] if e.lineno else [],
-                "error_type": "IndentationError"
+                "error_type": "IndentationError",
             }
         except Exception as e:
             return {
                 "is_valid": False,
                 "errors": [str(e)],
                 "line_numbers": [],
-                "error_type": type(e).__name__
+                "error_type": type(e).__name__,
             }
 
     def validate_javascript(self, code: str) -> Dict[str, Any]:
@@ -76,7 +66,7 @@ class SyntaxValidator:
         """
         # Simple bracket matching validation
         stack = []
-        pairs = {'(': ')', '[': ']', '{': '}'}
+        pairs = {"(": ")", "[": "]", "{": "}"}
 
         for char in code:
             if char in pairs:
@@ -87,7 +77,7 @@ class SyntaxValidator:
                         "is_valid": False,
                         "errors": ["Mismatched brackets"],
                         "line_numbers": [],
-                        "error_type": "SyntaxError"
+                        "error_type": "SyntaxError",
                     }
 
         if stack:
@@ -95,21 +85,12 @@ class SyntaxValidator:
                 "is_valid": False,
                 "errors": ["Unclosed brackets"],
                 "line_numbers": [],
-                "error_type": "SyntaxError"
+                "error_type": "SyntaxError",
             }
 
-        return {
-            "is_valid": True,
-            "errors": [],
-            "line_numbers": [],
-            "error_type": ""
-        }
+        return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
 
-    def validate_patch_application(
-        self,
-        file_path: str,
-        patch: str
-    ) -> Dict[str, Any]:
+    def validate_patch_application(self, file_path: str, patch: str) -> Dict[str, Any]:
         """
         Validate syntax after applying a patch.
 
@@ -127,18 +108,13 @@ class SyntaxValidator:
             raise FileNotFoundError(f"File not found: {file_path}")
 
         # Validate the patched code
-        if file_path.endswith('.py'):
+        if file_path.endswith(".py"):
             return self.validate_python(patch)
-        elif file_path.endswith('.js'):
+        elif file_path.endswith(".js"):
             return self.validate_javascript(patch)
         else:
             # Unknown file type - assume valid
-            return {
-                "is_valid": True,
-                "errors": [],
-                "line_numbers": [],
-                "error_type": ""
-            }
+            return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
 
     def check_imports(self, code: str) -> Dict[str, Any]:
         """
@@ -151,43 +127,30 @@ class SyntaxValidator:
             Validation result
         """
         # Extract import lines
-        lines = code.split('\n')
-        import_lines = [
-            line for line in lines
-            if line.strip().startswith(('import ', 'from '))
-        ]
+        lines = code.split("\n")
+        import_lines = [line for line in lines if line.strip().startswith(("import ", "from "))]
 
         if not import_lines:
-            return {
-                "is_valid": True,
-                "errors": [],
-                "line_numbers": [],
-                "error_type": ""
-            }
+            return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
 
         # Try to parse just the imports
-        import_code = '\n'.join(import_lines)
+        import_code = "\n".join(import_lines)
         try:
             ast.parse(import_code)
-            return {
-                "is_valid": True,
-                "errors": [],
-                "line_numbers": [],
-                "error_type": ""
-            }
+            return {"is_valid": True, "errors": [], "line_numbers": [], "error_type": ""}
         except SyntaxError as e:
             return {
                 "is_valid": False,
                 "errors": [f"Invalid import statement: {e}"],
                 "line_numbers": [e.lineno] if e.lineno else [],
-                "error_type": "SyntaxError"
+                "error_type": "SyntaxError",
             }
         except Exception as e:
             return {
                 "is_valid": False,
                 "errors": [f"Import validation error: {e}"],
                 "line_numbers": [],
-                "error_type": type(e).__name__
+                "error_type": type(e).__name__,
             }
 
     def get_validation_errors(self, result: Dict[str, Any]) -> List[str]:

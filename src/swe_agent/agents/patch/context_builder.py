@@ -8,6 +8,7 @@ Task 5.1: Code Context Builder
 - 导入语句
 - Token 数量限制
 """
+
 import ast
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
@@ -33,7 +34,7 @@ class ContextBuilder:
         imports = []
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 tree = ast.parse(f.read(), filename=file_path)
 
             for node in ast.walk(tree):
@@ -44,11 +45,13 @@ class ContextBuilder:
                         else:
                             imports.append(f"import {alias.name}")
                 elif isinstance(node, ast.ImportFrom):
-                    module = node.module or ''
-                    names = ', '.join([
-                        f"{alias.name} as {alias.asname}" if alias.asname else alias.name
-                        for alias in node.names
-                    ])
+                    module = node.module or ""
+                    names = ", ".join(
+                        [
+                            f"{alias.name} as {alias.asname}" if alias.asname else alias.name
+                            for alias in node.names
+                        ]
+                    )
                     imports.append(f"from {module} import {names}")
 
         except Exception:
@@ -74,7 +77,7 @@ class ContextBuilder:
         symbols = []
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 tree = ast.parse(content, filename=file_path)
 
@@ -89,7 +92,7 @@ class ContextBuilder:
         unique_symbols = []
         seen = set()
         for symbol in symbols:
-            key = (symbol['name'], symbol['start_line'], symbol['end_line'])
+            key = (symbol["name"], symbol["start_line"], symbol["end_line"])
             if key not in seen:
                 seen.add(key)
                 unique_symbols.append(symbol)
@@ -101,7 +104,7 @@ class ContextBuilder:
         nodes: List[ast.AST],
         focus_lines: List[int],
         symbols: List[Dict],
-        in_class: bool = False
+        in_class: bool = False,
     ):
         """
         递归查找包含焦点行的符号
@@ -115,17 +118,19 @@ class ContextBuilder:
         for node in nodes:
             if isinstance(node, ast.ClassDef):
                 start_line = node.lineno
-                end_line = node.end_lineno if hasattr(node, 'end_lineno') else start_line
+                end_line = node.end_lineno if hasattr(node, "end_lineno") else start_line
 
                 # 检查是否有焦点行在这个类的范围内
                 for focus_line in focus_lines:
                     if start_line <= focus_line <= end_line:
-                        symbols.append({
-                            'name': node.name,
-                            'type': 'class',
-                            'start_line': start_line,
-                            'end_line': end_line
-                        })
+                        symbols.append(
+                            {
+                                "name": node.name,
+                                "type": "class",
+                                "start_line": start_line,
+                                "end_line": end_line,
+                            }
+                        )
                         break
 
                 # 递归处理类的内容
@@ -133,25 +138,24 @@ class ContextBuilder:
 
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 start_line = node.lineno
-                end_line = node.end_lineno if hasattr(node, 'end_lineno') else start_line
+                end_line = node.end_lineno if hasattr(node, "end_lineno") else start_line
 
                 # 检查是否有焦点行在这个函数的范围内
                 for focus_line in focus_lines:
                     if start_line <= focus_line <= end_line:
-                        symbol_type = 'method' if in_class else 'function'
-                        symbols.append({
-                            'name': node.name,
-                            'type': symbol_type,
-                            'start_line': start_line,
-                            'end_line': end_line
-                        })
+                        symbol_type = "method" if in_class else "function"
+                        symbols.append(
+                            {
+                                "name": node.name,
+                                "type": symbol_type,
+                                "start_line": start_line,
+                                "end_line": end_line,
+                            }
+                        )
                         break
 
     def extract_surrounding_context(
-        self,
-        lines: List[str],
-        focus_lines: List[int],
-        context_size: int = 50
+        self, lines: List[str], focus_lines: List[int], context_size: int = 50
     ) -> List[Tuple[int, str]]:
         """
         提取焦点行周围的上下文
@@ -198,7 +202,7 @@ class ContextBuilder:
             包含完整上下文信息的字典
         """
         # 读取文件
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         # 收集导入语句
@@ -226,18 +230,18 @@ class ContextBuilder:
             for line_num, line_content in surrounding:
                 context_parts.append(f"{line_num:4d} | {line_content.rstrip()}")
 
-        context_str = '\n'.join(context_parts)
+        context_str = "\n".join(context_parts)
 
         # 估算 token 数量
         token_count = self._estimate_tokens(context_str)
 
         return {
-            'file_path': file_path,
-            'focus_lines': focus_lines,
-            'context': context_str,
-            'imports': imports,
-            'related_symbols': related_symbols,
-            'token_count': token_count
+            "file_path": file_path,
+            "focus_lines": focus_lines,
+            "context": context_str,
+            "imports": imports,
+            "related_symbols": related_symbols,
+            "token_count": token_count,
         }
 
     def limit_context_size(self, context_data: Dict, max_tokens: int = 15000) -> Dict:
@@ -256,22 +260,22 @@ class ContextBuilder:
         Returns:
             限制后的上下文数据
         """
-        current_tokens = context_data['token_count']
+        current_tokens = context_data["token_count"]
 
         if current_tokens <= max_tokens:
             # 不需要截断
-            return {**context_data, 'truncated': False}
+            return {**context_data, "truncated": False}
 
         # 需要截断
         # 策略：保留核心部分，逐步添加次要部分直到达到 token 限制
 
-        focus_lines = context_data['focus_lines']
-        imports = context_data['imports']
-        related_symbols = context_data['related_symbols']
-        file_path = context_data['file_path']
+        focus_lines = context_data["focus_lines"]
+        imports = context_data["imports"]
+        related_symbols = context_data["related_symbols"]
+        file_path = context_data["file_path"]
 
         # 读取原始文件
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
         # 1. 必需部分：焦点行和相关符号
@@ -279,11 +283,11 @@ class ContextBuilder:
 
         # 添加相关符号的所有行
         for symbol in related_symbols:
-            for line_num in range(symbol['start_line'], symbol['end_line'] + 1):
+            for line_num in range(symbol["start_line"], symbol["end_line"] + 1):
                 essential_lines.add(line_num)
 
         # 2. 高优先级：导入语句
-        import_str = '\n'.join(imports) if imports else ''
+        import_str = "\n".join(imports) if imports else ""
 
         # 3. 构建截断后的上下文
         context_parts = []
@@ -301,7 +305,7 @@ class ContextBuilder:
                 context_parts.append(f"{line_num:4d} | {lines[line_num - 1].rstrip()}")
 
         # 计算当前 token 数
-        truncated_context = '\n'.join(context_parts)
+        truncated_context = "\n".join(context_parts)
         truncated_tokens = self._estimate_tokens(truncated_context)
 
         # 如果还是超过限制，进一步截断（保留最核心的焦点行）
@@ -312,17 +316,17 @@ class ContextBuilder:
                 if 1 <= line_num <= len(lines):
                     context_parts.append(f"{line_num:4d} | {lines[line_num - 1].rstrip()}")
 
-            truncated_context = '\n'.join(context_parts)
+            truncated_context = "\n".join(context_parts)
             truncated_tokens = self._estimate_tokens(truncated_context)
 
         return {
-            'file_path': file_path,
-            'focus_lines': focus_lines,
-            'context': truncated_context,
-            'imports': imports,
-            'related_symbols': related_symbols,
-            'token_count': truncated_tokens,
-            'truncated': True
+            "file_path": file_path,
+            "focus_lines": focus_lines,
+            "context": truncated_context,
+            "imports": imports,
+            "related_symbols": related_symbols,
+            "token_count": truncated_tokens,
+            "truncated": True,
         }
 
     def _estimate_tokens(self, text: str) -> int:

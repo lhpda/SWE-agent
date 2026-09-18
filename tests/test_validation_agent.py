@@ -39,15 +39,15 @@ class TestValidationAgentInit:
         """Test agent creates PatchApplicator, TestRunner, and RegressionDetector."""
         agent = ValidationAgent({}, Mock(), {})
 
-        assert hasattr(agent, 'applicator')
-        assert hasattr(agent, 'test_runner')
-        assert hasattr(agent, 'regression_detector')
+        assert hasattr(agent, "applicator")
+        assert hasattr(agent, "test_runner")
+        assert hasattr(agent, "regression_detector")
 
 
 class TestApplyPatch:
     """Test _apply_patch method."""
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
     def test_apply_patch_success(self, mock_applicator_class):
         """Test successful patch application."""
         mock_applicator = Mock()
@@ -55,7 +55,7 @@ class TestApplyPatch:
             "success": True,
             "applied": True,
             "file_path": "/repo/test.py",
-            "snapshot_id": "snap_123"
+            "snapshot_id": "snap_123",
         }
         mock_applicator_class.return_value = mock_applicator
 
@@ -67,14 +67,14 @@ class TestApplyPatch:
         assert result["success"] is True
         assert result["applied"] is True
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
     def test_apply_patch_failure(self, mock_applicator_class):
         """Test patch application failure."""
         mock_applicator = Mock()
         mock_applicator.apply_patch.return_value = {
             "success": False,
             "applied": False,
-            "error": "Syntax error in patch"
+            "error": "Syntax error in patch",
         }
         mock_applicator_class.return_value = mock_applicator
 
@@ -91,7 +91,7 @@ class TestApplyPatch:
 class TestRunTestsBefore:
     """Test _run_tests_before method."""
 
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
     def test_run_tests_before_success(self, mock_runner_class):
         """Test running tests before patch application."""
         mock_runner = Mock()
@@ -102,7 +102,7 @@ class TestRunTestsBefore:
             "total": 13,
             "duration": 5.5,
             "failed_tests": ["test_a", "test_b"],
-            "output": "test output"
+            "output": "test output",
         }
         mock_runner_class.return_value = mock_runner
 
@@ -119,7 +119,7 @@ class TestRunTestsBefore:
 class TestRunTestsAfter:
     """Test _run_tests_after method."""
 
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
     def test_run_tests_after_success(self, mock_runner_class):
         """Test running tests after patch application."""
         mock_runner = Mock()
@@ -130,7 +130,7 @@ class TestRunTestsAfter:
             "total": 13,
             "duration": 5.2,
             "failed_tests": [],
-            "output": "all tests passed"
+            "output": "all tests passed",
         }
         mock_runner_class.return_value = mock_runner
 
@@ -147,7 +147,7 @@ class TestRunTestsAfter:
 class TestDetectRegression:
     """Test _detect_regression method."""
 
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
     def test_detect_no_regression(self, mock_detector_class):
         """Test regression detection when no regression exists."""
         mock_detector = Mock()
@@ -156,7 +156,7 @@ class TestDetectRegression:
             "new_failures": [],
             "fixed_tests": ["test_a", "test_b"],
             "still_failing": [],
-            "net_change": 2
+            "net_change": 2,
         }
         mock_detector_class.return_value = mock_detector
 
@@ -170,7 +170,7 @@ class TestDetectRegression:
         assert result["is_regression"] is False
         assert len(result["fixed_tests"]) == 2
 
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
     def test_detect_regression_exists(self, mock_detector_class):
         """Test regression detection when regression exists."""
         mock_detector = Mock()
@@ -179,7 +179,7 @@ class TestDetectRegression:
             "new_failures": ["test_c", "test_d"],
             "fixed_tests": ["test_a"],
             "still_failing": [],
-            "net_change": -1
+            "net_change": -1,
         }
         mock_detector_class.return_value = mock_detector
 
@@ -209,8 +209,8 @@ class TestGenerateReport:
             "regression_info": {
                 "is_regression": False,
                 "fixed_tests": ["test_a", "test_b"],
-                "new_failures": []
-            }
+                "new_failures": [],
+            },
         }
 
         report = agent._generate_report(validation_data)
@@ -231,8 +231,8 @@ class TestGenerateReport:
             "regression_info": {
                 "is_regression": True,
                 "fixed_tests": [],
-                "new_failures": ["test_c", "test_d"]
-            }
+                "new_failures": ["test_c", "test_d"],
+            },
         }
 
         report = agent._generate_report(validation_data)
@@ -245,17 +245,19 @@ class TestGenerateReport:
 class TestValidationAgentRun:
     """Test complete run method - main integration."""
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
-    def test_run_valid_patch_success(self, mock_detector_class, mock_runner_class, mock_applicator_class):
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
+    def test_run_valid_patch_success(
+        self, mock_detector_class, mock_runner_class, mock_applicator_class
+    ):
         """Test full validation run with valid patch that fixes tests."""
         # Setup mocks
         mock_applicator = Mock()
         mock_applicator.apply_patch.return_value = {
             "success": True,
             "applied": True,
-            "file_path": "/repo/test.py"
+            "file_path": "/repo/test.py",
         }
         mock_applicator_class.return_value = mock_applicator
 
@@ -268,7 +270,7 @@ class TestValidationAgentRun:
                 "total": 13,
                 "duration": 5.0,
                 "failed_tests": ["test_target", "test_other"],
-                "output": "before output"
+                "output": "before output",
             },
             {  # After patch
                 "passed": 12,
@@ -277,8 +279,8 @@ class TestValidationAgentRun:
                 "total": 13,
                 "duration": 5.2,
                 "failed_tests": [],
-                "output": "after output"
-            }
+                "output": "after output",
+            },
         ]
         mock_runner_class.return_value = mock_runner
 
@@ -288,13 +290,13 @@ class TestValidationAgentRun:
             "new_failures": [],
             "fixed_tests": ["test_target", "test_other"],
             "still_failing": [],
-            "net_change": 2
+            "net_change": 2,
         }
         mock_detector_class.return_value = mock_detector
 
         patch_result = {
             "patches": [{"id": "p1", "file": "/repo/test.py", "content": {}}],
-            "target_test": "test_target"
+            "target_test": "test_target",
         }
         repo_context = {"test_command": "pytest tests/", "path": "/repo"}
 
@@ -307,17 +309,19 @@ class TestValidationAgentRun:
         assert result["regression_check"]["is_regression"] is False
         assert result["execution_time"] >= 0
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
-    def test_run_regression_detected(self, mock_detector_class, mock_runner_class, mock_applicator_class):
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
+    def test_run_regression_detected(
+        self, mock_detector_class, mock_runner_class, mock_applicator_class
+    ):
         """Test validation run detects regression."""
         # Setup mocks
         mock_applicator = Mock()
         mock_applicator.apply_patch.return_value = {
             "success": True,
             "applied": True,
-            "file_path": "/repo/test.py"
+            "file_path": "/repo/test.py",
         }
         mock_applicator_class.return_value = mock_applicator
 
@@ -330,7 +334,7 @@ class TestValidationAgentRun:
                 "total": 13,
                 "duration": 5.0,
                 "failed_tests": ["test_a", "test_b"],
-                "output": "before output"
+                "output": "before output",
             },
             {  # After patch - introduces new failures
                 "passed": 8,
@@ -339,8 +343,8 @@ class TestValidationAgentRun:
                 "total": 13,
                 "duration": 5.5,
                 "failed_tests": ["test_a", "test_b", "test_c", "test_d", "test_e"],
-                "output": "after output with failures"
-            }
+                "output": "after output with failures",
+            },
         ]
         mock_runner_class.return_value = mock_runner
 
@@ -350,7 +354,7 @@ class TestValidationAgentRun:
             "new_failures": ["test_c", "test_d", "test_e"],
             "fixed_tests": [],
             "still_failing": ["test_a", "test_b"],
-            "net_change": -3
+            "net_change": -3,
         }
         mock_detector_class.return_value = mock_detector
 
@@ -364,14 +368,14 @@ class TestValidationAgentRun:
         assert result["regression_check"]["is_regression"] is True
         assert len(result["regression_check"]["new_failures"]) == 3
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
     def test_run_patch_application_fails(self, mock_applicator_class):
         """Test validation when patch application fails."""
         mock_applicator = Mock()
         mock_applicator.apply_patch.return_value = {
             "success": False,
             "applied": False,
-            "error": "File not found"
+            "error": "File not found",
         }
         mock_applicator_class.return_value = mock_applicator
 
@@ -384,10 +388,12 @@ class TestValidationAgentRun:
         assert result["status"] == "error"
         assert result["patch_applied"] is False
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
-    def test_run_target_test_identified(self, mock_detector_class, mock_runner_class, mock_applicator_class):
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
+    def test_run_target_test_identified(
+        self, mock_detector_class, mock_runner_class, mock_applicator_class
+    ):
         """Test that target test status is correctly identified."""
         # Setup mocks
         mock_applicator = Mock()
@@ -403,7 +409,7 @@ class TestValidationAgentRun:
                 "total": 11,
                 "duration": 5.0,
                 "failed_tests": ["test_target"],
-                "output": "before"
+                "output": "before",
             },
             {
                 "passed": 11,
@@ -412,8 +418,8 @@ class TestValidationAgentRun:
                 "total": 11,
                 "duration": 5.0,
                 "failed_tests": [],
-                "output": "after"
-            }
+                "output": "after",
+            },
         ]
         mock_runner_class.return_value = mock_runner
 
@@ -423,13 +429,13 @@ class TestValidationAgentRun:
             "new_failures": [],
             "fixed_tests": ["test_target"],
             "still_failing": [],
-            "net_change": 1
+            "net_change": 1,
         }
         mock_detector_class.return_value = mock_detector
 
         patch_result = {
             "patches": [{"id": "p1", "file": "/repo/test.py", "content": {}}],
-            "target_test": "test_target"
+            "target_test": "test_target",
         }
         repo_context = {"test_command": "pytest tests/", "path": "/repo"}
 
@@ -439,10 +445,12 @@ class TestValidationAgentRun:
         assert result["target_test_status"] == "passed"
         assert "test_target" in result["regression_check"]["fixed_tests"]
 
-    @patch('src.swe_agent.agents.validation.agent.PatchApplicator')
-    @patch('src.swe_agent.agents.validation.agent.TestRunner')
-    @patch('src.swe_agent.agents.validation.agent.RegressionDetector')
-    def test_run_measures_execution_time(self, mock_detector_class, mock_runner_class, mock_applicator_class):
+    @patch("src.swe_agent.agents.validation.agent.PatchApplicator")
+    @patch("src.swe_agent.agents.validation.agent.TestRunner")
+    @patch("src.swe_agent.agents.validation.agent.RegressionDetector")
+    def test_run_measures_execution_time(
+        self, mock_detector_class, mock_runner_class, mock_applicator_class
+    ):
         """Test that execution time is measured."""
         # Setup mocks
         mock_applicator = Mock()
@@ -457,7 +465,7 @@ class TestValidationAgentRun:
             "total": 10,
             "duration": 5.0,
             "failed_tests": [],
-            "output": "output"
+            "output": "output",
         }
         mock_runner_class.return_value = mock_runner
 
@@ -467,7 +475,7 @@ class TestValidationAgentRun:
             "new_failures": [],
             "fixed_tests": [],
             "still_failing": [],
-            "net_change": 0
+            "net_change": 0,
         }
         mock_detector_class.return_value = mock_detector
 

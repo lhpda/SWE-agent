@@ -28,9 +28,7 @@ class ToolResult(BaseModel):
     output: Optional[Any] = Field(None, description="Tool output")
     truncated: bool = Field(..., description="Whether output was truncated")
     error: Optional[str] = Field(None, description="Error message if failed")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Execution metadata"
-    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Execution metadata")
 
     model_config = {"extra": "forbid"}
 

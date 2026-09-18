@@ -50,6 +50,10 @@ htmlcov/
 dmypy.json
 
 # SWE Agent specific
+.env
+.env.*
+agent.env
+!.env.example
 .swe-agent/
 *.diff
 *.patch

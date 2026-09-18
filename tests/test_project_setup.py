@@ -43,7 +43,9 @@ class TestPythonVersion:
         """Verify Python version is 3.11+."""
         version_info = sys.version_info
         assert version_info.major == 3
-        assert version_info.minor >= 11, f"Python 3.11+ required, got {version_info.major}.{version_info.minor}"
+        assert (
+            version_info.minor >= 11
+        ), f"Python 3.11+ required, got {version_info.major}.{version_info.minor}"
 
 
 class TestDependencies:
@@ -52,16 +54,19 @@ class TestDependencies:
     def test_anthropic_import(self):
         """Verify anthropic package is installed."""
         import anthropic
+
         assert anthropic is not None
 
     def test_docker_import(self):
         """Verify docker package is installed."""
         import docker
+
         assert docker is not None
 
     def test_pydantic_import(self):
         """Verify pydantic package is installed."""
         import pydantic
+
         assert pydantic is not None
         # Verify it's v2
         assert hasattr(pydantic, "BaseModel")
@@ -69,11 +74,13 @@ class TestDependencies:
     def test_gitpython_import(self):
         """Verify gitpython package is installed."""
         import git
+
         assert git is not None
 
     def test_structlog_import(self):
         """Verify structlog package is installed."""
         import structlog
+
         assert structlog is not None
 
 
@@ -83,14 +90,13 @@ class TestDevDependencies:
     def test_pytest_import(self):
         """Verify pytest is installed."""
         import pytest
+
         assert pytest is not None
 
     def test_black_available(self):
         """Verify black is available."""
         result = subprocess.run(
-            ["poetry", "run", "black", "--version"],
-            capture_output=True,
-            text=True
+            ["poetry", "run", "black", "--version"], capture_output=True, text=True
         )
         assert result.returncode == 0
         assert "black" in result.stdout.lower()
@@ -98,9 +104,7 @@ class TestDevDependencies:
     def test_ruff_available(self):
         """Verify ruff is available."""
         result = subprocess.run(
-            ["poetry", "run", "ruff", "--version"],
-            capture_output=True,
-            text=True
+            ["poetry", "run", "ruff", "--version"], capture_output=True, text=True
         )
         assert result.returncode == 0
         assert "ruff" in result.stdout.lower()
@@ -108,9 +112,7 @@ class TestDevDependencies:
     def test_mypy_available(self):
         """Verify mypy is available."""
         result = subprocess.run(
-            ["poetry", "run", "mypy", "--version"],
-            capture_output=True,
-            text=True
+            ["poetry", "run", "mypy", "--version"], capture_output=True, text=True
         )
         assert result.returncode == 0
         assert "mypy" in result.stdout.lower()

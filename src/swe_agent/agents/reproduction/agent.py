@@ -100,7 +100,7 @@ class ReproductionAgent:
             # Step 3: Run tests with retry strategy
             test_result = self._run_tests_with_retry()
 
-            if test_result["status"] == "error" and self.attempts_made >= self.max_attempts:
+            if test_result["status"] == "error":
                 # Failed after all retries
                 execution_time = time.time() - start_time
                 return ReproductionResult(
@@ -113,7 +113,7 @@ class ReproductionAgent:
                         "log": test_result.get("stderr", ""),
                     },
                     test_command=test_result.get("command", "unknown"),
-                    test_output=test_result.get("stderr", "")[:5120],
+                    test_output=test_result.get("output", test_result.get("stderr", ""))[:5120],
                     execution_time=execution_time,
                     attempts=self.attempts_made,
                 )
@@ -229,6 +229,10 @@ class ReproductionAgent:
         logger.info("installing_dependencies", command=install_cmd)
 
         try:
+            network = None
+            if isinstance(self.sandbox, DockerSandbox) and self.sandbox.container_id:
+                network = self.sandbox.client.networks.get("bridge")
+                network.connect(self.sandbox.container_id)
             result = self.sandbox.execute(
                 install_cmd,
                 timeout=300,  # 5 minutes for installation
@@ -262,6 +266,9 @@ class ReproductionAgent:
                 "installed": False,
                 "error": str(e),
             }
+        finally:
+            if network is not None:
+                network.disconnect(self.sandbox.container_id, force=True)
 
     def _run_tests_with_retry(self) -> Dict[str, Any]:
         """Run tests with retry strategy using fallback commands.
@@ -313,7 +320,7 @@ class ReproductionAgent:
             result = self._run_tests(command)
 
             # Check if command executed successfully (not command not found)
-            if result["status"] != "error" or result["exit_code"] != 127:
+            if result["status"] != "timeout" and result["exit_code"] in (0, 1):
                 # Command executed (even if tests failed)
                 return {
                     "status": "success",
@@ -390,6 +397,12 @@ class ReproductionAgent:
             }
 
         # Parse log to extract error information
+        if exit_code not in (0, 1):
+            return {
+                "status": "error",
+                "root_cause": None,
+                "error_details": {"error_type": "ExecutionError", "message": test_output},
+            }
         analyzer = LogAnalyzer(test_output)
 
         error_type = analyzer.identify_error_type()

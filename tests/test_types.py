@@ -536,7 +536,12 @@ class TestPipelineResult:
             },
             execution_summary={
                 "total_time": 600.0,
-                "stages_completed": ["localization", "reproduction", "patch_generation", "validation"],
+                "stages_completed": [
+                    "localization",
+                    "reproduction",
+                    "patch_generation",
+                    "validation",
+                ],
                 "tool_calls_total": 25,
                 "llm_calls_total": 8,
                 "tokens_used": 50000,

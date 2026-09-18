@@ -127,7 +127,7 @@ class ReadFileTool(Tool):
             truncated = len(content) > self.max_content_size
 
             if truncated:
-                content = content[:self.max_content_size]
+                content = content[: self.max_content_size]
                 content += f"\n\n[Truncated: original size {len(''.join(lines))} chars, showing first {self.max_content_size} chars]"
                 logger.info(
                     "read_file_truncated",
@@ -271,7 +271,7 @@ class ReadFileWithContextTool(Tool):
             truncated = len(content) > self.max_content_size
 
             if truncated:
-                content = content[:self.max_content_size]
+                content = content[: self.max_content_size]
                 content += f"\n\n[Truncated: showing first {self.max_content_size} chars]"
                 logger.info(
                     "read_with_context_truncated",

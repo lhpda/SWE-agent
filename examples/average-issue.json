@@ -1,0 +1,10 @@
+{
+  "repo_path": "./examples/average",
+  "issue_number": "average-empty-list",
+  "title": "Return zero for the average of an empty list",
+  "body": "calculate_average([]) raises ZeroDivisionError. The expected result is 0. Preserve normal averages for non-empty lists, including negative numbers.\n\nTraceback (most recent call last):\n  File \"calculator.py\", line 2, in calculate_average\n    return sum(values) / len(values)\nZeroDivisionError: division by zero",
+  "code_context": {
+    "files": ["calculator.py"],
+    "relevant_functions": ["calculate_average"]
+  }
+}

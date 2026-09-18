@@ -34,10 +34,7 @@ class TestRunner:
         self._last_result = None
 
     def run_test_suite(
-        self,
-        test_command: str,
-        working_dir: str,
-        timeout: Optional[int] = None
+        self, test_command: str, working_dir: str, timeout: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Run complete test suite.
@@ -84,7 +81,7 @@ class TestRunner:
             "duration": stats["duration"],
             "output": truncated_output,
             "timed_out": result["status"] == "timeout",
-            "exit_code": result["exit_code"]
+            "exit_code": result["exit_code"],
         }
 
         # Store for get_summary()
@@ -109,31 +106,25 @@ class TestRunner:
                 - total: Total number of tests
                 - duration: Execution time in seconds
         """
-        stats = {
-            "passed": 0,
-            "failed": 0,
-            "skipped": 0,
-            "total": 0,
-            "duration": 0.0
-        }
+        stats = {"passed": 0, "failed": 0, "skipped": 0, "total": 0, "duration": 0.0}
 
         # Try pytest format first
         # Pattern: "=== 5 passed, 2 failed, 1 skipped in 3.45s ==="
         # Match summary line with duration
-        duration_match = re.search(r'in\s+([\d.]+)s\s*=+', output)
+        duration_match = re.search(r"in\s+([\d.]+)s(?:\s*=+|\s*$)", output, re.MULTILINE)
         if duration_match:
             stats["duration"] = float(duration_match.group(1))
 
             # Extract individual counts
-            passed_match = re.search(r'(\d+)\s+passed', output)
+            passed_match = re.search(r"(\d+)\s+passed", output)
             if passed_match:
                 stats["passed"] = int(passed_match.group(1))
 
-            failed_match = re.search(r'(\d+)\s+failed', output)
+            failed_match = re.search(r"(\d+)\s+failed", output)
             if failed_match:
                 stats["failed"] = int(failed_match.group(1))
 
-            skipped_match = re.search(r'(\d+)\s+skipped', output)
+            skipped_match = re.search(r"(\d+)\s+skipped", output)
             if skipped_match:
                 stats["skipped"] = int(skipped_match.group(1))
 
@@ -143,8 +134,8 @@ class TestRunner:
         # Try jest format
         # Pattern: "Tests: 1 failed, 2 passed, 3 total"
         jest_match = re.search(
-            r'Tests:\s*(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(?:(\d+)\s+passed,?\s*)?(\d+)\s+total',
-            output
+            r"Tests:\s*(?:(\d+)\s+failed,?\s*)?(?:(\d+)\s+skipped,?\s*)?(?:(\d+)\s+passed,?\s*)?(\d+)\s+total",
+            output,
         )
         if jest_match:
             failed = jest_match.group(1)
@@ -158,7 +149,7 @@ class TestRunner:
             stats["total"] = int(total) if total else 0
 
             # Try to find duration
-            time_match = re.search(r'Time:\s*([\d.]+)s', output)
+            time_match = re.search(r"Time:\s*([\d.]+)s", output)
             if time_match:
                 stats["duration"] = float(time_match.group(1))
 
@@ -216,7 +207,7 @@ class TestRunner:
                 "skipped": 0,
                 "total": 0,
                 "duration": 0.0,
-                "timed_out": False
+                "timed_out": False,
             }
 
         return {
@@ -225,5 +216,5 @@ class TestRunner:
             "skipped": self._last_result["skipped"],
             "total": self._last_result["total"],
             "duration": self._last_result["duration"],
-            "timed_out": self._last_result["timed_out"]
+            "timed_out": self._last_result["timed_out"],
         }

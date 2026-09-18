@@ -199,7 +199,9 @@ class ErrorHandler:
             stage_summary = ", ".join(f"{s}: {c}" for s, c in by_stage.items())
             summary_parts.append(f"By stage: {stage_summary}")
 
-        summary_parts.append(f"Recoverable: {recoverable_count}, Unrecoverable: {unrecoverable_count}")
+        summary_parts.append(
+            f"Recoverable: {recoverable_count}, Unrecoverable: {unrecoverable_count}"
+        )
 
         summary = {
             "total_count": len(self.errors),

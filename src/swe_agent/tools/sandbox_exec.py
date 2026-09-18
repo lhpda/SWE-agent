@@ -33,17 +33,14 @@ class RunCommandTool(Tool):
         self.parameters_schema = {
             "type": "object",
             "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "Shell command to execute"
-                },
+                "command": {"type": "string", "description": "Shell command to execute"},
                 "timeout": {
                     "type": "integer",
                     "description": "Timeout in seconds (default: 300)",
-                    "default": 300
-                }
+                    "default": 300,
+                },
             },
-            "required": ["command"]
+            "required": ["command"],
         }
         # 5KB limit for sandbox tool output (as per Task 2.3 requirements)
         self.max_output_size = 5 * 1024
@@ -77,10 +74,7 @@ class RunCommandTool(Tool):
                     output="",
                     truncated=False,
                     error=f"Command timed out after {timeout}s",
-                    metadata={
-                        "exit_code": exit_code,
-                        "execution_time": execution_time
-                    }
+                    metadata={"exit_code": exit_code, "execution_time": execution_time},
                 )
 
             # Handle execution error
@@ -90,10 +84,7 @@ class RunCommandTool(Tool):
                     output=stdout,
                     truncated=False,
                     error=error_msg,
-                    metadata={
-                        "exit_code": exit_code,
-                        "execution_time": execution_time
-                    }
+                    metadata={"exit_code": exit_code, "execution_time": execution_time},
                 )
 
             # Success - combine stdout and stderr
@@ -103,19 +94,16 @@ class RunCommandTool(Tool):
 
             # Apply truncation
             truncated_result = self.truncate_output(output)
-            truncated_result.metadata.update({
-                "exit_code": exit_code,
-                "execution_time": execution_time
-            })
+            truncated_result.metadata.update(
+                {"exit_code": exit_code, "execution_time": execution_time}
+            )
 
             return truncated_result
 
         except Exception as e:
             logger.error("run_command_failed", command=command[:100], error=str(e))
             return ToolResult(
-                output="",
-                truncated=False,
-                error=f"Command execution failed: {str(e)}"
+                output="", truncated=False, error=f"Command execution failed: {str(e)}"
             )
 
 
@@ -143,15 +131,15 @@ class RunTestTool(Tool):
                 "test_path": {
                     "type": "string",
                     "description": "Path to test file or directory",
-                    "default": ""
+                    "default": "",
                 },
                 "timeout": {
                     "type": "integer",
                     "description": "Timeout in seconds (default: 600)",
-                    "default": 600
-                }
+                    "default": 600,
+                },
             },
-            "required": []
+            "required": [],
         }
         # 5KB limit for test output
         self.max_output_size = 5 * 1024
@@ -210,7 +198,7 @@ class RunTestTool(Tool):
             return ToolResult(
                 output="",
                 truncated=False,
-                error="No test framework detected. Supported: pytest, jest, junit"
+                error="No test framework detected. Supported: pytest, jest, junit",
             )
 
         # Build test command based on framework
@@ -225,9 +213,7 @@ class RunTestTool(Tool):
                 command += f" -Dtest={test_path}"
         else:
             return ToolResult(
-                output="",
-                truncated=False,
-                error=f"Unsupported test framework: {framework}"
+                output="", truncated=False, error=f"Unsupported test framework: {framework}"
             )
 
         logger.info("run_test_command", framework=framework, command=command)
@@ -251,8 +237,8 @@ class RunTestTool(Tool):
                     metadata={
                         "framework": framework,
                         "exit_code": exit_code,
-                        "execution_time": execution_time
-                    }
+                        "execution_time": execution_time,
+                    },
                 )
 
             # Combine output
@@ -268,11 +254,9 @@ class RunTestTool(Tool):
             # Apply truncation
             truncated_result = self.truncate_output(output)
             truncated_result.error = error_msg
-            truncated_result.metadata.update({
-                "framework": framework,
-                "exit_code": exit_code,
-                "execution_time": execution_time
-            })
+            truncated_result.metadata.update(
+                {"framework": framework, "exit_code": exit_code, "execution_time": execution_time}
+            )
 
             return truncated_result
 
@@ -282,7 +266,7 @@ class RunTestTool(Tool):
                 output="",
                 truncated=False,
                 error=f"Test execution failed: {str(e)}",
-                metadata={"framework": framework}
+                metadata={"framework": framework},
             )
 
 
@@ -310,10 +294,10 @@ class InstallDepsTool(Tool):
                 "timeout": {
                     "type": "integer",
                     "description": "Timeout in seconds (default: 600)",
-                    "default": 600
+                    "default": 600,
                 }
             },
-            "required": []
+            "required": [],
         }
         # 5KB limit for installation output
         self.max_output_size = 5 * 1024
@@ -361,7 +345,7 @@ class InstallDepsTool(Tool):
             return ToolResult(
                 output="",
                 truncated=False,
-                error="No dependency file detected. Supported: requirements.txt, package.json, pom.xml"
+                error="No dependency file detected. Supported: requirements.txt, package.json, pom.xml",
             )
 
         # Build installation command based on project type
@@ -377,9 +361,7 @@ class InstallDepsTool(Tool):
             command = "mvn dependency:resolve"
         else:
             return ToolResult(
-                output="",
-                truncated=False,
-                error=f"Unsupported project type: {project_type}"
+                output="", truncated=False, error=f"Unsupported project type: {project_type}"
             )
 
         logger.info("install_deps_command", project_type=project_type, command=command)
@@ -403,8 +385,8 @@ class InstallDepsTool(Tool):
                     metadata={
                         "project_type": project_type,
                         "exit_code": exit_code,
-                        "execution_time": execution_time
-                    }
+                        "execution_time": execution_time,
+                    },
                 )
 
             # Combine output
@@ -420,11 +402,13 @@ class InstallDepsTool(Tool):
             # Apply truncation
             truncated_result = self.truncate_output(output)
             truncated_result.error = error_msg
-            truncated_result.metadata.update({
-                "project_type": project_type,
-                "exit_code": exit_code,
-                "execution_time": execution_time
-            })
+            truncated_result.metadata.update(
+                {
+                    "project_type": project_type,
+                    "exit_code": exit_code,
+                    "execution_time": execution_time,
+                }
+            )
 
             return truncated_result
 
@@ -434,5 +418,5 @@ class InstallDepsTool(Tool):
                 output="",
                 truncated=False,
                 error=f"Dependency installation failed: {str(e)}",
-                metadata={"project_type": project_type}
+                metadata={"project_type": project_type},
             )

@@ -166,7 +166,7 @@ class TestAddError:
             "attempt": 2,
             "repo": "test/repo",
             "issue_id": "123",
-            "extra_info": "Some additional context"
+            "extra_info": "Some additional context",
         }
 
         handler.add_error(error, context)
@@ -302,7 +302,10 @@ class TestGenerateReport:
         assert report["total_errors"] == 1
         assert report["recoverable_count"] == 0
         assert report["unrecoverable_count"] == 1
-        assert "abort" in report["recommendation"].lower() or "stop" in report["recommendation"].lower()
+        assert (
+            "abort" in report["recommendation"].lower()
+            or "stop" in report["recommendation"].lower()
+        )
 
     def test_generate_report_mixed_errors(self):
         """Report with mixed errors should provide balanced recommendation."""
@@ -374,7 +377,9 @@ class TestRecoverableErrorRetryTrigger:
         handler = ErrorHandler()
 
         handler.add_error({"type": "timeout", "message": "Timeout 1"}, {"stage": "LOCALIZING"})
-        handler.add_error({"type": "network_error", "message": "Network 1"}, {"stage": "LOCALIZING"})
+        handler.add_error(
+            {"type": "network_error", "message": "Network 1"}, {"stage": "LOCALIZING"}
+        )
 
         report = handler.generate_report()
 
@@ -402,12 +407,18 @@ class TestErrorHandlerIntegration:
         handler = ErrorHandler()
 
         # Simulate multiple retryable failures
-        handler.add_error({"type": "timeout", "message": "Timeout during localization"},
-                         {"stage": "LOCALIZING", "attempt": 0})
-        handler.add_error({"type": "network_error", "message": "Network issue during test"},
-                         {"stage": "REPRODUCING", "attempt": 1})
-        handler.add_error({"type": "rate_limit", "message": "API rate limit hit"},
-                         {"stage": "PATCHING", "attempt": 0})
+        handler.add_error(
+            {"type": "timeout", "message": "Timeout during localization"},
+            {"stage": "LOCALIZING", "attempt": 0},
+        )
+        handler.add_error(
+            {"type": "network_error", "message": "Network issue during test"},
+            {"stage": "REPRODUCING", "attempt": 1},
+        )
+        handler.add_error(
+            {"type": "rate_limit", "message": "API rate limit hit"},
+            {"stage": "PATCHING", "attempt": 0},
+        )
 
         report = handler.generate_report()
 
@@ -420,16 +431,22 @@ class TestErrorHandlerIntegration:
         """Realistic scenario with fatal unrecoverable error."""
         handler = ErrorHandler()
 
-        handler.add_error({"type": "timeout", "message": "Timeout"},
-                         {"stage": "LOCALIZING", "attempt": 0})
-        handler.add_error({"type": "invalid_repo", "message": "Repository does not exist"},
-                         {"stage": "LOCALIZING", "attempt": 1})
+        handler.add_error(
+            {"type": "timeout", "message": "Timeout"}, {"stage": "LOCALIZING", "attempt": 0}
+        )
+        handler.add_error(
+            {"type": "invalid_repo", "message": "Repository does not exist"},
+            {"stage": "LOCALIZING", "attempt": 1},
+        )
 
         report = handler.generate_report()
 
         assert report["total_errors"] == 2
         assert report["unrecoverable_count"] == 1
-        assert "abort" in report["recommendation"].lower() or "stop" in report["recommendation"].lower()
+        assert (
+            "abort" in report["recommendation"].lower()
+            or "stop" in report["recommendation"].lower()
+        )
 
     def test_clear_errors(self):
         """Should be able to clear errors and start fresh."""
@@ -452,7 +469,7 @@ class TestErrorHandlerIntegration:
 
         handler.add_error(
             {"type": "timeout", "message": "Operation timed out"},
-            {"stage": "LOCALIZING", "attempt": 2, "repo": "test/repo", "issue": "#123"}
+            {"stage": "LOCALIZING", "attempt": 2, "repo": "test/repo", "issue": "#123"},
         )
 
         report = handler.generate_report()
@@ -466,14 +483,16 @@ class TestErrorHandlerIntegration:
         """Should handle errors from different stages correctly."""
         handler = ErrorHandler()
 
-        handler.add_error({"type": "timeout", "message": "Localization timeout"},
-                         {"stage": "LOCALIZING"})
-        handler.add_error({"type": "test_flaky", "message": "Flaky test"},
-                         {"stage": "REPRODUCING"})
-        handler.add_error({"type": "sandbox_busy", "message": "Sandbox unavailable"},
-                         {"stage": "PATCHING"})
-        handler.add_error({"type": "network_error", "message": "Network down"},
-                         {"stage": "VALIDATING"})
+        handler.add_error(
+            {"type": "timeout", "message": "Localization timeout"}, {"stage": "LOCALIZING"}
+        )
+        handler.add_error({"type": "test_flaky", "message": "Flaky test"}, {"stage": "REPRODUCING"})
+        handler.add_error(
+            {"type": "sandbox_busy", "message": "Sandbox unavailable"}, {"stage": "PATCHING"}
+        )
+        handler.add_error(
+            {"type": "network_error", "message": "Network down"}, {"stage": "VALIDATING"}
+        )
 
         summary = handler.aggregate_errors()
 

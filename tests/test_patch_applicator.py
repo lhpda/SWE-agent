@@ -7,6 +7,7 @@ Tests cover:
 - Snapshot state restoration
 - File permission consistency
 """
+
 import pytest
 from unittest.mock import Mock, MagicMock, patch, mock_open
 import os
@@ -40,7 +41,9 @@ class TestCreateSnapshot:
         mock_sandbox = Mock()
         mock_sandbox.container_id = "test-container-123"
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             mock_manager.create_snapshot.return_value = "snapshot-123"
             MockSnapshotManager.return_value = mock_manager
@@ -58,7 +61,9 @@ class TestCreateSnapshot:
         mock_sandbox = Mock()
         mock_sandbox.container_id = "test-container-123"
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             mock_manager.create_snapshot.return_value = "snapshot-456"
             MockSnapshotManager.return_value = mock_manager
@@ -73,7 +78,9 @@ class TestCreateSnapshot:
         applicator = PatchApplicator()
         mock_sandbox = Mock()
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             mock_manager.create_snapshot.side_effect = RuntimeError("Snapshot failed")
             MockSnapshotManager.return_value = mock_manager
@@ -90,7 +97,9 @@ class TestRollback:
         applicator = PatchApplicator()
         mock_sandbox = Mock()
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             MockSnapshotManager.return_value = mock_manager
 
@@ -117,7 +126,9 @@ class TestRollback:
         applicator = PatchApplicator()
         mock_sandbox = Mock()
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             mock_manager.restore_snapshot.side_effect = Exception("Restore failed")
             MockSnapshotManager.return_value = mock_manager
@@ -138,7 +149,7 @@ class TestVerifyApplication:
         """Test verification when file exists."""
         applicator = PatchApplicator()
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('hello')")
             temp_file = f.name
 
@@ -162,7 +173,7 @@ class TestVerifyApplication:
         """Test verification includes syntax check for Python files."""
         applicator = PatchApplicator()
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("def foo():\n    return 42\n")
             temp_file = f.name
 
@@ -177,7 +188,7 @@ class TestVerifyApplication:
         """Test verification detects syntax errors."""
         applicator = PatchApplicator()
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("def foo(\n    return 42\n")  # Missing closing paren
             temp_file = f.name
 
@@ -202,15 +213,17 @@ class TestApplyPatch:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "print('updated')\n"
+            "content": "print('updated')\n",
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-abc"
                 MockSnapshotManager.return_value = mock_manager
@@ -224,7 +237,7 @@ class TestApplyPatch:
                 assert result["error"] is None
 
                 # Verify file was actually modified
-                with open(temp_file, 'r') as f:
+                with open(temp_file, "r") as f:
                     content = f.read()
                     assert "updated" in content
         finally:
@@ -240,16 +253,18 @@ class TestApplyPatch:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "def foo(\n"  # Invalid syntax
+            "content": "def foo(\n",  # Invalid syntax
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
             original_content = "print('original')\n"
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-rollback"
                 MockSnapshotManager.return_value = mock_manager
@@ -262,7 +277,7 @@ class TestApplyPatch:
 
                 # Verify rollback was attempted via edit engine
                 # File should still have original content since edit engine validates
-                with open(temp_file, 'r') as f:
+                with open(temp_file, "r") as f:
                     content = f.read()
                     assert content == original_content
         finally:
@@ -277,10 +292,12 @@ class TestApplyPatch:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "new content\n"
+            "content": "new content\n",
         }
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             mock_manager.create_snapshot.return_value = "snapshot-notfound"
             MockSnapshotManager.return_value = mock_manager
@@ -301,10 +318,10 @@ class TestApplyPatch:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "print('updated')\n"
+            "content": "print('updated')\n",
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
 
@@ -313,7 +330,9 @@ class TestApplyPatch:
         original_perms = os.stat(temp_file).st_mode
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-perms"
                 MockSnapshotManager.return_value = mock_manager
@@ -334,18 +353,16 @@ class TestApplyPatch:
         mock_sandbox = Mock()
         mock_sandbox.container_id = "test-container"
 
-        patch_content = {
-            "type": "insert",
-            "start_line": 0,
-            "content": "# Header comment\n"
-        }
+        patch_content = {"type": "insert", "start_line": 0, "content": "# Header comment\n"}
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-multi"
                 MockSnapshotManager.return_value = mock_manager
@@ -355,7 +372,7 @@ class TestApplyPatch:
                 assert result["success"] is True
                 assert result["applied"] is True
 
-                with open(temp_file, 'r') as f:
+                with open(temp_file, "r") as f:
                     content = f.read()
                     assert content.startswith("# Header comment")
         finally:
@@ -369,10 +386,10 @@ class TestApplyPatch:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "print('updated')\n"
+            "content": "print('updated')\n",
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
 
@@ -390,17 +407,16 @@ class TestApplyPatch:
         applicator = PatchApplicator()
         mock_sandbox = Mock()
 
-        patch_content = {
-            "type": "invalid_type",
-            "content": "something\n"
-        }
+        patch_content = {"type": "invalid_type", "content": "something\n"}
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('original')\n")
             temp_file = f.name
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-invalid"
                 MockSnapshotManager.return_value = mock_manager
@@ -427,15 +443,17 @@ class TestPatchApplicatorEdgeCases:
             "type": "replace",
             "start_line": 1,
             "end_line": 1,
-            "content": "new content\n"
+            "content": "new content\n",
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
             f.write("original content\n")
             temp_file = f.name
 
         try:
-            with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+            with patch(
+                "src.swe_agent.agents.validation.applicator.SnapshotManager"
+            ) as MockSnapshotManager:
                 mock_manager = Mock()
                 mock_manager.create_snapshot.return_value = "snapshot-txt"
                 MockSnapshotManager.return_value = mock_manager
@@ -451,7 +469,9 @@ class TestPatchApplicatorEdgeCases:
         """Test that rollback clears the current snapshot reference."""
         applicator = PatchApplicator()
 
-        with patch('src.swe_agent.agents.validation.applicator.SnapshotManager') as MockSnapshotManager:
+        with patch(
+            "src.swe_agent.agents.validation.applicator.SnapshotManager"
+        ) as MockSnapshotManager:
             mock_manager = Mock()
             MockSnapshotManager.return_value = mock_manager
 
@@ -466,7 +486,7 @@ class TestPatchApplicatorEdgeCases:
         """Test that verification includes file permission information."""
         applicator = PatchApplicator()
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
             f.write("print('test')\n")
             temp_file = f.name
 

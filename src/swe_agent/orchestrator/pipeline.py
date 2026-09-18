@@ -7,6 +7,8 @@ to execute the full bug-fixing pipeline with state management, retries, and erro
 
 import time
 import uuid
+import shutil
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -20,6 +22,7 @@ from swe_agent.orchestrator.retry import RetryStrategy
 from swe_agent.orchestrator.state_machine import State, StateMachine
 from swe_agent.sandbox.docker import DockerSandbox
 from swe_agent.storage import StateStore
+from swe_agent.config import Config, load_config
 from swe_agent.types import (
     ErrorInfo,
     IssueContext,
@@ -64,6 +67,7 @@ class PipelineOrchestrator:
         session_id: Optional[str] = None,
         global_timeout: int = DEFAULT_GLOBAL_TIMEOUT,
         sandbox: Optional[DockerSandbox] = None,
+        config: Optional[Config] = None,
     ):
         """Initialize pipeline orchestrator.
 
@@ -81,6 +85,9 @@ class PipelineOrchestrator:
         self.session_id = session_id or str(uuid.uuid4())
         self.global_timeout = global_timeout
         self.sandbox = sandbox
+        self.config = config or load_config()
+        self._owns_sandbox = sandbox is None
+        self._workspace = None
 
         # Create session in state store
         self.state_store.create_session(self.session_id)
@@ -91,6 +98,10 @@ class PipelineOrchestrator:
             metadata={
                 "issue_id": issue.issue_id,
                 "repo_path": repository.path,
+                "issue": issue.model_dump(mode="json"),
+                "repository": repository.model_dump(mode="json"),
+                "config": self.config.model_dump(mode="json"),
+                "global_timeout": global_timeout,
             },
         )
 
@@ -113,6 +124,7 @@ class PipelineOrchestrator:
 
         # Track start time for global timeout
         self.start_time: Optional[float] = None
+        self.state_machine.save_state(self.state_store)
 
         logger.info(
             "pipeline_orchestrator_initialized",
@@ -132,8 +144,21 @@ class PipelineOrchestrator:
         logger.info("pipeline_starting", session_id=self.session_id)
 
         try:
+            if self.state_machine.get_current_state() == State.DONE:
+                return self._build_success_result()
+            if self.state_machine.get_current_state() != State.IDLE:
+                # Containers are ephemeral: restart the execution stages from a clean copy.
+                # Keep the last localization result and rebuild execution evidence.
+                self.state_machine = StateMachine(self.session_id, self.state_machine.metadata)
+                self.stage_results.pop("reproduction", None)
+                self.stage_results.pop("patch_generation", None)
+                self.stage_results.pop("validation", None)
             # Execute pipeline stages
-            self._run_localization()
+            localization = self.stage_results.get("localization")
+            if localization and localization.status in {"success", "partial"}:
+                self.state_machine.transition(State.LOCALIZING)
+            else:
+                self._run_localization()
             self._run_reproduction()
             self._run_patch_generation()
             self._run_validation()
@@ -185,6 +210,38 @@ class PipelineOrchestrator:
                 error_message=str(e),
             )
 
+        finally:
+            if self._owns_sandbox and self.sandbox is not None:
+                self.sandbox.destroy()
+                self.sandbox = None
+
+    def _ensure_sandbox(self) -> None:
+        if self.sandbox is not None:
+            return
+        source = Path(self.repository.path).resolve()
+        if not source.is_dir():
+            raise ValueError(f"Repository directory does not exist: {source}")
+        workspace = self.state_store.get_session_path(self.session_id).resolve() / "workspace"
+        # Never bind-mount the user's original checkout for patch validation.
+        shutil.copytree(
+            source,
+            workspace,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(
+                ".git",
+                ".swe-agent",
+                ".venv",
+                ".env",
+                ".env.*",
+                "agent.env",
+                "__pycache__",
+                ".pytest_cache",
+            ),
+        )
+        self._workspace = workspace
+        self.sandbox = DockerSandbox(session_id=self.session_id)
+        self.sandbox.create(self.config.docker_image, str(workspace))
+
     def _check_timeout(self) -> None:
         """Check if global timeout has been exceeded.
 
@@ -232,12 +289,10 @@ class PipelineOrchestrator:
 
                 # Save result
                 self.stage_results["localization"] = result
-                self.state_store.save_stage_result(
-                    self.session_id, "localization", result
-                )
+                self.state_store.save_stage_result(self.session_id, "localization", result)
 
                 # Check if successful
-                if result.status == "success":
+                if result.status in {"success", "partial"} and result.candidates:
                     logger.info(
                         "stage_completed",
                         stage=stage_name,
@@ -305,8 +360,7 @@ class PipelineOrchestrator:
 
             try:
                 # Create sandbox if needed
-                if self.sandbox is None:
-                    self.sandbox = DockerSandbox(session_id=self.session_id)
+                self._ensure_sandbox()
 
                 # Create and run reproduction agent
                 agent = ReproductionAgent(
@@ -319,9 +373,7 @@ class PipelineOrchestrator:
 
                 # Save result
                 self.stage_results["reproduction"] = result
-                self.state_store.save_stage_result(
-                    self.session_id, "reproduction", result
-                )
+                self.state_store.save_stage_result(self.session_id, "reproduction", result)
 
                 # Check if successful
                 if result.status == "reproduced":
@@ -377,7 +429,8 @@ class PipelineOrchestrator:
         logger.info("stage_starting", stage=stage_name, session_id=self.session_id)
 
         # Transition to PATCHING state
-        self.state_machine.transition(State.PATCHING)
+        if self.state_machine.get_current_state() != State.PATCHING:
+            self.state_machine.transition(State.PATCHING)
         self.state_machine.save_state(self.state_store)
 
         localization_result = self.stage_results.get("localization")
@@ -396,19 +449,20 @@ class PipelineOrchestrator:
                 agent = PatchGeneratorAgent(
                     localization_result=localization_result.model_dump(),
                     reproduction_result=reproduction_result.model_dump(),
-                    repo_context=self.repository.model_dump(),
+                    repo_context={**self.repository.model_dump(), "issue_body": self.issue.body},
+                    config=self.config,
                 )
 
                 result_dict = agent.run()
 
                 # Convert to PatchResult
-                result = PatchResult(**result_dict)
+                result = PatchResult(
+                    **{k: v for k, v in result_dict.items() if k in PatchResult.model_fields}
+                )
 
                 # Save result
                 self.stage_results["patch_generation"] = result
-                self.state_store.save_stage_result(
-                    self.session_id, "patch_generation", result
-                )
+                self.state_store.save_stage_result(self.session_id, "patch_generation", result)
 
                 # Check if successful
                 if result.status == "generated" and result.patches:
@@ -430,8 +484,12 @@ class PipelineOrchestrator:
                     )
                     continue
                 else:
-                    raise Exception(f"Patch generation failed with status: {result.status}")
+                    raise Exception(
+                        f"Patch generation failed: {result_dict.get('error', result.status)}"
+                    )
 
+            except PermissionError:
+                raise
             except Exception as e:
                 # Add error to handler
                 self.error_handler.add_error(
@@ -480,26 +538,29 @@ class PipelineOrchestrator:
 
             try:
                 # Ensure sandbox exists
-                if self.sandbox is None:
-                    self.sandbox = DockerSandbox(session_id=self.session_id)
+                self._ensure_sandbox()
 
                 # Create and run validation agent
                 agent = ValidationAgent(
                     patch_result=patch_result.model_dump(),
                     sandbox=self.sandbox,
-                    repo_context=self.repository.model_dump(),
+                    repo_context={
+                        **self.repository.model_dump(),
+                        "path": str(self._workspace or self.repository.path),
+                        "test_command": self.stage_results["reproduction"].test_command,
+                    },
                 )
 
                 result_dict = agent.run()
 
                 # Convert to ValidationResult
-                result = ValidationResult(**result_dict)
+                result = ValidationResult(
+                    **{k: v for k, v in result_dict.items() if k in ValidationResult.model_fields}
+                )
 
                 # Save result
                 self.stage_results["validation"] = result
-                self.state_store.save_stage_result(
-                    self.session_id, "validation", result
-                )
+                self.state_store.save_stage_result(self.session_id, "validation", result)
 
                 # Check if successful
                 if result.status == "passed":
@@ -512,6 +573,9 @@ class PipelineOrchestrator:
 
                 # Check if should rollback
                 if self.retry_strategy.should_rollback(stage_name, result.model_dump()):
+                    if not self.retry_strategy.should_retry(stage_name, attempt):
+                        raise RuntimeError("Validation failed after bounded patch retries")
+                    self.stage_attempts[stage_name] += 1
                     logger.warning(
                         "validation_regression_rollback",
                         stage=stage_name,
@@ -523,7 +587,7 @@ class PipelineOrchestrator:
                     self.state_machine.save_state(self.state_store)
 
                     # Re-run patch generation
-                    self._run_patch_generation()
+                    patch_result = self._run_patch_generation()
 
                     # Transition back to VALIDATING
                     self.state_machine.transition(State.VALIDATING)
@@ -589,9 +653,7 @@ class PipelineOrchestrator:
                 }
 
         # Get audit log path
-        audit_log = str(
-            self.state_store.get_session_path(self.session_id) / "execution_log.jsonl"
-        )
+        audit_log = str(self.state_store.get_session_path(self.session_id) / "execution_log.jsonl")
 
         return PipelineResult(
             session_id=self.session_id,
@@ -604,9 +666,7 @@ class PipelineOrchestrator:
             error=None,
         )
 
-    def _build_failure_result(
-        self, error_type: str, error_message: str
-    ) -> PipelineResult:
+    def _build_failure_result(self, error_type: str, error_message: str) -> PipelineResult:
         """Build failed pipeline result.
 
         Args:
@@ -630,9 +690,7 @@ class PipelineOrchestrator:
                 }
 
         # Get audit log path
-        audit_log = str(
-            self.state_store.get_session_path(self.session_id) / "execution_log.jsonl"
-        )
+        audit_log = str(self.state_store.get_session_path(self.session_id) / "execution_log.jsonl")
 
         # Build error info
         error_info = ErrorInfo(
@@ -736,15 +794,17 @@ class PipelineOrchestrator:
             stages=stages,
             retry_count=sum(self.stage_attempts.values()),
             max_retries=sum(self.retry_strategy.retry_limits.values()),
-            started_at=now,
-            updated_at=now,
-            completed_at=now if current_sm_state in [State.DONE, State.FAILED] else None,
+            started_at=self.state_machine.get_history()[0]["timestamp"],
+            updated_at=self.state_machine.get_history()[-1]["timestamp"],
+            completed_at=(
+                self.state_machine.get_history()[-1]["timestamp"]
+                if current_sm_state in [State.DONE, State.FAILED]
+                else None
+            ),
             error=error_info,
         )
 
-    def _build_stage_status(
-        self, stage_name: str, result: Any, retries: int
-    ) -> StageStatus:
+    def _build_stage_status(self, stage_name: str, result: Any, retries: int) -> StageStatus:
         """Build stage status from result.
 
         Args:
@@ -812,34 +872,36 @@ class PipelineOrchestrator:
         if state_machine is None:
             raise ValueError(f"Could not load state for session {run_id}")
 
-        # Load issue and repository context from metadata
-        metadata = state_store.load_metadata(run_id)
-
-        # For now, return a minimal instance
-        # Full implementation would reconstruct issue/repository from saved state
-        # This is sufficient for the tests to pass
-        logger.info(
-            "pipeline_resumed",
-            run_id=run_id,
-            current_state=state_machine.get_current_state().value,
-        )
-
-        # Create a placeholder instance (would be fully reconstructed in production)
+        metadata = state_machine.metadata
+        if "issue" not in metadata or "repository" not in metadata:
+            raise ValueError(
+                "This legacy session has no saved issue/repository context; start a new run"
+            )
         instance = cls.__new__(cls)
         instance.session_id = run_id
         instance.state_store = state_store
         instance.state_machine = state_machine
+        instance.issue = IssueContext.model_validate(metadata["issue"])
+        instance.repository = RepositoryContext.model_validate(metadata["repository"])
+        instance.config = Config.model_validate(metadata.get("config", {}))
         instance.retry_strategy = RetryStrategy()
         instance.error_handler = ErrorHandler()
         instance.stage_results = {}
+        for name, model in (
+            ("localization", LocalizationResult),
+            ("reproduction", ReproductionResult),
+            ("patch_generation", PatchResult),
+            ("validation", ValidationResult),
+        ):
+            data = state_store.load_stage_result(run_id, name)
+            if data:
+                instance.stage_results[name] = model.model_validate(data)
         instance.stage_attempts = {
-            "LOCALIZING": 0,
-            "REPRODUCING": 0,
-            "PATCHING": 0,
-            "VALIDATING": 0,
+            name: 0 for name in ("LOCALIZING", "REPRODUCING", "PATCHING", "VALIDATING")
         }
         instance.start_time = None
         instance.sandbox = None
-        instance.global_timeout = DEFAULT_GLOBAL_TIMEOUT
-
+        instance._owns_sandbox = True
+        instance._workspace = None
+        instance.global_timeout = metadata.get("global_timeout", DEFAULT_GLOBAL_TIMEOUT)
         return instance

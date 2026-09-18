@@ -189,9 +189,7 @@ class RetryStrategy:
         if loop_detected:
             # Find which state(s) caused the loop
             looping_states = [
-                state
-                for state, count in state_counts.items()
-                if count >= self.loop_threshold
+                state for state, count in state_counts.items() if count >= self.loop_threshold
             ]
             logger.warning(
                 "loop_detected",

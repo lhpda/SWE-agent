@@ -36,13 +36,15 @@ class TestRunTestSuite:
     def test_run_pytest_suite_success(self):
         """Test running pytest suite successfully."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_two PASSED\n===== 2 passed in 1.23s =====",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 1.23
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_two PASSED\n===== 2 passed in 1.23s =====",
+                "stderr": "",
+                "exit_code": 0,
+                "execution_time": 1.23,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("pytest tests/", "/path/to/project")
@@ -59,13 +61,15 @@ class TestRunTestSuite:
     def test_run_pytest_suite_with_failures(self):
         """Test running pytest suite with failures."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_two FAILED\n===== 1 passed, 1 failed in 2.34s =====",
-            "stderr": "",
-            "exit_code": 1,
-            "execution_time": 2.34
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_two FAILED\n===== 1 passed, 1 failed in 2.34s =====",
+                "stderr": "",
+                "exit_code": 1,
+                "execution_time": 2.34,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("pytest tests/", "/path/to/project")
@@ -78,13 +82,15 @@ class TestRunTestSuite:
     def test_run_jest_suite_success(self):
         """Test running jest suite successfully."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "PASS tests/example.test.js\n✓ test one (10 ms)\n✓ test two (15 ms)\nTests: 2 passed, 2 total\nTime: 1.5s",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 1.5
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "PASS tests/example.test.js\n✓ test one (10 ms)\n✓ test two (15 ms)\nTests: 2 passed, 2 total\nTime: 1.5s",
+                "stderr": "",
+                "exit_code": 0,
+                "execution_time": 1.5,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("npm test", "/path/to/project")
@@ -97,13 +103,15 @@ class TestRunTestSuite:
     def test_run_suite_with_timeout(self):
         """Test running suite with timeout."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "timeout",
-            "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_slow",
-            "stderr": "Timeout exceeded",
-            "exit_code": -1,
-            "execution_time": 600
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "timeout",
+                "stdout": "test_example.py::test_one PASSED\ntest_example.py::test_slow",
+                "stderr": "Timeout exceeded",
+                "exit_code": -1,
+                "execution_time": 600,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("pytest tests/", "/path/to/project", timeout=600)
@@ -115,13 +123,15 @@ class TestRunTestSuite:
     def test_run_suite_custom_timeout(self):
         """Test running suite with custom timeout."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "===== 5 passed in 10.0s =====",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 10.0
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "===== 5 passed in 10.0s =====",
+                "stderr": "",
+                "exit_code": 0,
+                "execution_time": 10.0,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("pytest tests/", "/path/to/project", timeout=300)
@@ -133,13 +143,15 @@ class TestRunTestSuite:
     def test_run_suite_with_stderr(self):
         """Test running suite with stderr output."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "===== 3 passed in 1.0s =====",
-            "stderr": "Warning: deprecated feature used",
-            "exit_code": 0,
-            "execution_time": 1.0
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "===== 3 passed in 1.0s =====",
+                "stderr": "Warning: deprecated feature used",
+                "exit_code": 0,
+                "execution_time": 1.0,
+            }
+        )
 
         runner = TestRunner(sandbox)
         result = runner.run_test_suite("pytest tests/", "/path/to/project")
@@ -270,13 +282,15 @@ class TestGetSummary:
     def test_get_summary_after_successful_run(self):
         """Test getting summary after successful test run."""
         sandbox = Mock()
-        sandbox.execute = Mock(return_value={
-            "status": "success",
-            "stdout": "===== 5 passed in 2.5s =====",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 2.5
-        })
+        sandbox.execute = Mock(
+            return_value={
+                "status": "success",
+                "stdout": "===== 5 passed in 2.5s =====",
+                "stderr": "",
+                "exit_code": 0,
+                "execution_time": 2.5,
+            }
+        )
 
         runner = TestRunner(sandbox)
         runner.run_test_suite("pytest tests/", "/path")
@@ -304,22 +318,24 @@ class TestGetSummary:
     def test_get_summary_after_multiple_runs(self):
         """Test getting summary after multiple test runs."""
         sandbox = Mock()
-        sandbox.execute = Mock(side_effect=[
-            {
-                "status": "success",
-                "stdout": "===== 3 passed in 1.0s =====",
-                "stderr": "",
-                "exit_code": 0,
-                "execution_time": 1.0
-            },
-            {
-                "status": "success",
-                "stdout": "===== 5 passed, 1 failed in 2.0s =====",
-                "stderr": "",
-                "exit_code": 1,
-                "execution_time": 2.0
-            }
-        ])
+        sandbox.execute = Mock(
+            side_effect=[
+                {
+                    "status": "success",
+                    "stdout": "===== 3 passed in 1.0s =====",
+                    "stderr": "",
+                    "exit_code": 0,
+                    "execution_time": 1.0,
+                },
+                {
+                    "status": "success",
+                    "stdout": "===== 5 passed, 1 failed in 2.0s =====",
+                    "stderr": "",
+                    "exit_code": 1,
+                    "execution_time": 2.0,
+                },
+            ]
+        )
 
         runner = TestRunner(sandbox)
         runner.run_test_suite("pytest tests/", "/path")

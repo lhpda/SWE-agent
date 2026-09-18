@@ -583,7 +583,11 @@ class AstQueryTool(Tool):
                 "import_statement": "import_statement",
             },
             "javascript": {
-                "function_definition": ["function_declaration", "arrow_function", "method_definition"],
+                "function_definition": [
+                    "function_declaration",
+                    "arrow_function",
+                    "method_definition",
+                ],
                 "class_definition": "class_declaration",
                 "function_call": "call_expression",
                 "import_statement": "import_statement",
@@ -632,14 +636,22 @@ class AstQueryTool(Tool):
                 # Look for identifier child
                 for child in node.children:
                     if child.type == "identifier" or child.type == "property_identifier":
-                        name = child.text.decode("utf-8") if isinstance(child.text, bytes) else child.text
+                        name = (
+                            child.text.decode("utf-8")
+                            if isinstance(child.text, bytes)
+                            else child.text
+                        )
                         break
 
             if query_type == "function_call":
                 # For function calls, extract the function name
                 for child in node.children:
                     if child.type in ["identifier", "attribute", "member_expression"]:
-                        name = child.text.decode("utf-8") if isinstance(child.text, bytes) else child.text
+                        name = (
+                            child.text.decode("utf-8")
+                            if isinstance(child.text, bytes)
+                            else child.text
+                        )
                         break
 
             if query_type == "import_statement":

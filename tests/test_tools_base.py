@@ -11,6 +11,7 @@ class TestToolInterface:
 
     def test_tool_has_required_attributes(self):
         """Test that Tool defines required attributes."""
+
         # Create a concrete implementation
         class DummyTool(Tool):
             name = "dummy"
@@ -27,6 +28,7 @@ class TestToolInterface:
 
     def test_tool_execute_returns_tool_result(self):
         """Test that execute returns ToolResult."""
+
         class TestTool(Tool):
             name = "test"
             description = "Test tool"
@@ -83,6 +85,7 @@ class TestParameterValidation:
 
     def test_validate_parameters_with_valid_input(self):
         """Test parameter validation with valid input."""
+
         class ValidatedTool(Tool):
             name = "validated"
             description = "Validated tool"
@@ -105,6 +108,7 @@ class TestParameterValidation:
 
     def test_validate_parameters_with_missing_required(self):
         """Test parameter validation with missing required field."""
+
         class StrictTool(Tool):
             name = "strict"
             description = "Strict tool"
@@ -124,6 +128,7 @@ class TestParameterValidation:
 
     def test_validate_parameters_with_wrong_type(self):
         """Test parameter validation with wrong type."""
+
         class TypedTool(Tool):
             name = "typed"
             description = "Typed tool"
@@ -146,6 +151,7 @@ class TestOutputTruncation:
 
     def test_truncate_output_under_limit(self):
         """Test that output under limit is not truncated."""
+
         class TruncatingTool(Tool):
             name = "truncating"
             description = "Truncating tool"
@@ -164,6 +170,7 @@ class TestOutputTruncation:
 
     def test_truncate_output_over_limit(self):
         """Test that output over limit is truncated."""
+
         class TruncatingTool(Tool):
             name = "truncating"
             description = "Truncating tool"
@@ -185,6 +192,7 @@ class TestOutputTruncation:
 
     def test_default_max_output_size(self):
         """Test default max output size is 10KB."""
+
         class DefaultTool(Tool):
             name = "default"
             description = "Default tool"

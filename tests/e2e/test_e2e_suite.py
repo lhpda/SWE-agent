@@ -33,10 +33,10 @@ class TestE2EFrameworkInitialization:
         framework = E2ETestFramework()
 
         assert framework is not None
-        assert hasattr(framework, 'load_test_cases')
-        assert hasattr(framework, 'run_test_case')
-        assert hasattr(framework, 'collect_metrics')
-        assert hasattr(framework, 'generate_report')
+        assert hasattr(framework, "load_test_cases")
+        assert hasattr(framework, "run_test_case")
+        assert hasattr(framework, "collect_metrics")
+        assert hasattr(framework, "generate_report")
 
     def test_framework_initialization_with_fixtures_path(self, tmp_path):
         """Test framework can be initialized with custom fixtures path."""
@@ -77,16 +77,12 @@ class TestTestCaseLoading:
             "language": "python",
             "complexity": "simple",
             "body": "Test body",
-            "repository": {
-                "type": "python",
-                "test_framework": "pytest",
-                "test_command": "pytest"
-            },
+            "repository": {"type": "python", "test_framework": "pytest", "test_command": "pytest"},
             "expected_fix": {
                 "file": "test.py",
                 "description": "Fix test",
-                "validation": "Test passes"
-            }
+                "validation": "Test passes",
+            },
         }
 
         (fixtures_path / "test_001.json").write_text(json.dumps(test_case))
@@ -166,7 +162,7 @@ class TestTestCaseExecution:
             "title": "Test issue",
             "body": "Test body",
             "complexity": "simple",
-            "repository": {"type": "python"}
+            "repository": {"type": "python"},
         }
 
         result = framework.run_test_case(test_case, workspace_path=tmp_path)
@@ -221,7 +217,7 @@ class TestTestCaseExecution:
             "title": "Test issue",
             "body": "Test body",
             "complexity": "medium",
-            "repository": {"type": "python"}
+            "repository": {"type": "python"},
         }
 
         result = framework.run_test_case(test_case, workspace_path=tmp_path)
@@ -271,7 +267,7 @@ class TestTestCaseExecution:
                 "title": "Test",
                 "body": "Test",
                 "complexity": "simple",
-                "repository": {"type": "python"}
+                "repository": {"type": "python"},
             }
 
             result = framework.run_test_case(test_case, workspace_path=tmp_path)
@@ -295,7 +291,7 @@ class TestTestCaseExecution:
             "title": "Test",
             "body": "Test",
             "complexity": "simple",
-            "repository": {"type": "python"}
+            "repository": {"type": "python"},
         }
 
         result = framework.run_test_case(test_case, workspace_path=tmp_path)
@@ -382,7 +378,7 @@ class TestMetricsCollection:
         simple_metrics = metrics["by_complexity"]["simple"]
         assert simple_metrics["total"] == 3
         assert simple_metrics["success"] == 2
-        assert simple_metrics["success_rate"] == pytest.approx(2/3, 0.01)
+        assert simple_metrics["success_rate"] == pytest.approx(2 / 3, 0.01)
 
         medium_metrics = metrics["by_complexity"]["medium"]
         assert medium_metrics["total"] == 4
@@ -417,8 +413,18 @@ class TestReportGeneration:
         framework = E2ETestFramework()
 
         results = [
-            {"test_id": "test-001", "complexity": "simple", "status": "success", "execution_time": 5.0},
-            {"test_id": "test-002", "complexity": "simple", "status": "failed", "execution_time": 3.0},
+            {
+                "test_id": "test-001",
+                "complexity": "simple",
+                "status": "success",
+                "execution_time": 5.0,
+            },
+            {
+                "test_id": "test-002",
+                "complexity": "simple",
+                "status": "failed",
+                "execution_time": 3.0,
+            },
         ]
 
         metrics = framework.collect_metrics(results)
@@ -442,8 +448,19 @@ class TestReportGeneration:
         framework = E2ETestFramework()
 
         results = [
-            {"test_id": "test-001", "complexity": "simple", "status": "success", "execution_time": 5.0},
-            {"test_id": "test-002", "complexity": "simple", "status": "failed", "execution_time": 3.0, "error": "Test error"},
+            {
+                "test_id": "test-001",
+                "complexity": "simple",
+                "status": "success",
+                "execution_time": 5.0,
+            },
+            {
+                "test_id": "test-002",
+                "complexity": "simple",
+                "status": "failed",
+                "execution_time": 3.0,
+                "error": "Test error",
+            },
         ]
 
         metrics = framework.collect_metrics(results)
@@ -453,7 +470,7 @@ class TestReportGeneration:
 
         assert report_path.exists()
 
-        html_content = report_path.read_text(encoding='utf-8')
+        html_content = report_path.read_text(encoding="utf-8")
         assert "<!DOCTYPE html>" in html_content or "<html" in html_content
         assert "test-001" in html_content
         assert "test-002" in html_content
@@ -464,7 +481,14 @@ class TestReportGeneration:
 
         framework = E2ETestFramework()
 
-        results = [{"test_id": "test-001", "complexity": "simple", "status": "success", "execution_time": 5.0}]
+        results = [
+            {
+                "test_id": "test-001",
+                "complexity": "simple",
+                "status": "success",
+                "execution_time": 5.0,
+            }
+        ]
         metrics = framework.collect_metrics(results)
 
         report_path = tmp_path / "report.json"
@@ -635,7 +659,12 @@ class TestSuccessCriteria:
         framework = E2ETestFramework()
 
         results = [
-            {"test_id": "neg1", "complexity": "negative", "status": "failed", "execution_time": 5.0},
+            {
+                "test_id": "neg1",
+                "complexity": "negative",
+                "status": "failed",
+                "execution_time": 5.0,
+            },
         ]
 
         metrics = framework.collect_metrics(results)

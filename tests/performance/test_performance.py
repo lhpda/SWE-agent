@@ -31,13 +31,15 @@ class TestPerformanceBaseline:
 
         # Create a simple Python file with a bug
         test_file = repo_path / "calculator.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 def add(a, b):
     return a + b
 
 def divide(a, b):
     return a / b  # Bug: no zero check
-""")
+"""
+        )
 
         # Create issue context
         issue_context = IssueContext(
@@ -58,15 +60,11 @@ File "calculator.py", line 6, in divide
 ```
 """,
             parsed={},
-            metadata={}
+            metadata={},
         )
 
         repo_context = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         # Measure execution time
@@ -94,15 +92,18 @@ File "calculator.py", line 6, in divide
         # Create multiple files
         for i in range(5):
             file_path = repo_path / f"module_{i}.py"
-            file_path.write_text(f"""
+            file_path.write_text(
+                f"""
 class Module{i}:
     def process(self, data):
         return data * 2
-""")
+"""
+            )
 
         # File with bug
         bug_file = repo_path / "processor.py"
-        bug_file.write_text("""
+        bug_file.write_text(
+            """
 from module_0 import Module0
 
 class Processor:
@@ -111,7 +112,8 @@ class Processor:
         for item in items:
             result.append(item.value)  # Bug: no None check
         return result
-""")
+"""
+        )
 
         issue_context = IssueContext(
             issue_id="medium-1",
@@ -128,15 +130,11 @@ File "processor.py", line 7, in run
 ```
 """,
             parsed={},
-            metadata={}
+            metadata={},
         )
 
         repo_context = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         # Measure execution time
@@ -164,15 +162,11 @@ File "processor.py", line 7, in run
             title="Test issue",
             body="Error in foo function",
             parsed={},
-            metadata={}
+            metadata={},
         )
 
         repo_context = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         agent = LocalizationAgent(issue_context, repo_context)
@@ -198,10 +192,12 @@ class TestConcurrentSessions:
             repo_path.mkdir()
 
             test_file = repo_path / "code.py"
-            test_file.write_text(f"""
+            test_file.write_text(
+                f"""
 def function_{i}():
     return {i} / 0  # Bug: division by zero
-""")
+"""
+            )
             repos.append(repo_path)
 
         # Create issue contexts for each
@@ -212,14 +208,14 @@ def function_{i}():
                 title=f"Bug {i}",
                 body=f"ZeroDivisionError in function_{i}",
                 parsed={},
-                metadata={}
+                metadata={},
             )
             repo = RepositoryContext(
                 path=str(repo_path),
                 git={},
                 project_type="python",
                 test_framework=None,
-                dependencies={}
+                dependencies={},
             )
             sessions.append((issue, repo))
 
@@ -250,7 +246,7 @@ def function_{i}():
         tool_calls = [r.tool_calls for r in results]
         assert all(tc > 0 for tc in tool_calls), "All sessions should make tool calls"
 
-    @patch('docker.from_env')
+    @patch("docker.from_env")
     def test_concurrent_sandbox_isolation(self, mock_docker_from_env):
         """Test that concurrent sandboxes don't interfere with each other."""
         mock_client = MagicMock()
@@ -325,7 +321,7 @@ class TestMemoryUsage:
                 title="Test",
                 body="Error in test function",
                 parsed={},
-                metadata={}
+                metadata={},
             )
 
             repo = RepositoryContext(
@@ -333,7 +329,7 @@ class TestMemoryUsage:
                 git={},
                 project_type="python",
                 test_framework=None,
-                dependencies={}
+                dependencies={},
             )
 
             agent = LocalizationAgent(issue, repo)
@@ -341,6 +337,7 @@ class TestMemoryUsage:
 
             # Force garbage collection
             import gc
+
             gc.collect()
 
         # Get final memory
@@ -351,7 +348,9 @@ class TestMemoryUsage:
         per_session_growth = memory_growth / 3
 
         # Assertion
-        assert per_session_growth < 500, f"Memory growth per session: {per_session_growth}MB (target: < 500MB)"
+        assert (
+            per_session_growth < 500
+        ), f"Memory growth per session: {per_session_growth}MB (target: < 500MB)"
 
     def test_no_memory_leak_in_agents(self, tmp_path):
         """Test that running same agent multiple times doesn't leak memory."""
@@ -364,19 +363,11 @@ class TestMemoryUsage:
         test_file.write_text("def test(): pass")
 
         issue = IssueContext(
-            issue_id="leak-test",
-            title="Test",
-            body="Error",
-            parsed={},
-            metadata={}
+            issue_id="leak-test", title="Test", body="Error", parsed={}, metadata={}
         )
 
         repo = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         # Baseline run
@@ -384,6 +375,7 @@ class TestMemoryUsage:
         agent.run()
 
         import gc
+
         gc.collect()
         baseline_memory = process.memory_info().rss / 1024 / 1024
 
@@ -405,7 +397,7 @@ class TestMemoryUsage:
 class TestResourceCleanup:
     """Test resource cleanup after execution."""
 
-    @patch('docker.from_env')
+    @patch("docker.from_env")
     def test_no_orphan_containers_after_tests(self, mock_docker_from_env):
         """Test that no orphan containers remain after tests complete."""
         mock_client = MagicMock()
@@ -450,6 +442,7 @@ class TestResourceCleanup:
 
         # Simulate cleanup
         import shutil
+
         if session_dir.exists():
             shutil.rmtree(session_dir)
 
@@ -457,7 +450,7 @@ class TestResourceCleanup:
         assert not temp_file.exists()
         assert not session_dir.exists()
 
-    @patch('docker.from_env')
+    @patch("docker.from_env")
     def test_network_cleanup(self, mock_docker_from_env):
         """Test that Docker networks are cleaned up."""
         mock_client = MagicMock()
@@ -509,7 +502,7 @@ class TestResourceCleanup:
 class TestResourceLimits:
     """Test that resource limits are enforced."""
 
-    @patch('docker.from_env')
+    @patch("docker.from_env")
     def test_container_resource_limits_set(self, mock_docker_from_env):
         """Test that containers are created with proper resource limits."""
         mock_client = MagicMock()
@@ -535,6 +528,7 @@ class TestResourceLimits:
 
         # Create container
         import tempfile
+
         with tempfile.TemporaryDirectory() as tmpdir:
             sandbox.create(image="python:3.11-slim", work_dir=tmpdir)
 
@@ -557,7 +551,7 @@ class TestResourceLimits:
         """Test that execution timeouts are properly enforced."""
         # This is more of an integration test, here we test the logic
 
-        @patch('docker.from_env')
+        @patch("docker.from_env")
         def run_test(mock_docker_from_env):
             mock_client = MagicMock()
             mock_docker_from_env.return_value = mock_client
@@ -602,19 +596,11 @@ class TestPerformanceMetrics:
         test_file.write_text("def test(): pass")
 
         issue = IssueContext(
-            issue_id="metrics-1",
-            title="Test",
-            body="Error",
-            parsed={},
-            metadata={}
+            issue_id="metrics-1", title="Test", body="Error", parsed={}, metadata={}
         )
 
         repo = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         agent = LocalizationAgent(issue, repo)
@@ -634,19 +620,11 @@ class TestPerformanceMetrics:
         test_file.write_text("def test(): pass")
 
         issue = IssueContext(
-            issue_id="tool-count-1",
-            title="Test",
-            body="Error in test",
-            parsed={},
-            metadata={}
+            issue_id="tool-count-1", title="Test", body="Error in test", parsed={}, metadata={}
         )
 
         repo = RepositoryContext(
-            path=str(repo_path),
-            git={},
-            project_type="python",
-            test_framework=None,
-            dependencies={}
+            path=str(repo_path), git={}, project_type="python", test_framework=None, dependencies={}
         )
 
         agent = LocalizationAgent(issue, repo)

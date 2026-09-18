@@ -6,6 +6,10 @@ Provides snapshot creation, restoration, and Git backup functionality.
 
 import subprocess
 import time
+import tempfile
+import io
+import tarfile
+from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import docker
@@ -47,9 +51,10 @@ class SnapshotManager:
         self.sandbox = sandbox
         self.session_id = sandbox.session_id
         self.snapshots: List[Dict[str, Any]] = []
+        self._archives = tempfile.TemporaryDirectory(prefix="swe-snapshots-")
 
         try:
-            self.docker_client = docker.from_env()
+            self.docker_client = sandbox.client
         except Exception as e:
             logger.error("docker_client_init_failed", error=str(e))
             raise
@@ -78,12 +83,23 @@ class SnapshotManager:
 
             # Get container
             container = self.docker_client.containers.get(self.sandbox.container_id)
+            # docker commit excludes bind mounts and tmpfs. Archive writable data explicitly.
+            archive_path = Path(self._archives.name) / f"{snapshot_name}.tar"
+            archive = container.exec_run(["tar", "-C", "/", "-cf", "-", "tmp", "workspace"])
+            if archive.exit_code:
+                raise RuntimeError("Could not archive sandbox writable directories")
+            with tarfile.open(fileobj=io.BytesIO(archive.output)) as source_tar:
+                with tarfile.open(archive_path, "w") as target_tar:
+                    for member in source_tar:
+                        if member.name.rstrip("/") in {"tmp", "workspace"}:
+                            continue
+                        target_tar.addfile(
+                            member, source_tar.extractfile(member) if member.isfile() else None
+                        )
 
             # Commit container to create snapshot image
             image = container.commit(
-                repository=snapshot_name,
-                tag="latest",
-                message=f"Snapshot: {tag or 'auto'}"
+                repository=snapshot_name, tag="latest", message=f"Snapshot: {tag or 'auto'}"
             )
 
             snapshot_id = image.id
@@ -100,6 +116,7 @@ class SnapshotManager:
                 "created_at": datetime.utcnow().isoformat(),
                 "container_id": self.sandbox.container_id,
                 "size": size,
+                "archive": str(archive_path),
             }
 
             self.snapshots.append(snapshot_info)
@@ -200,6 +217,32 @@ class SnapshotManager:
 
             # Update sandbox container_id
             self.sandbox.container_id = new_container.id
+            # Reset mounted files too, including files introduced after the snapshot.
+            cleanup = new_container.exec_run(
+                [
+                    "python",
+                    "-c",
+                    "import pathlib,shutil; [shutil.rmtree(p) if p.is_dir() and not p.is_symlink() else p.unlink() for d in ('/tmp','/workspace') for p in pathlib.Path(d).iterdir()]",
+                ]
+            )
+            if cleanup.exit_code:
+                raise RuntimeError("Could not clear sandbox before restoring snapshot")
+            self.sandbox.copy_file(snapshot_info["archive"], "/tmp/.swe-restore.tar")
+            restored = new_container.exec_run(
+                [
+                    "tar",
+                    "--no-same-owner",
+                    "--same-permissions",
+                    "--no-overwrite-dir",
+                    "-C",
+                    "/",
+                    "-xf",
+                    "/tmp/.swe-restore.tar",
+                ]
+            )
+            if restored.exit_code:
+                raise RuntimeError(restored.output.decode("utf-8", errors="replace"))
+            new_container.exec_run(["rm", "-f", "/tmp/.swe-restore.tar"])
 
             logger.info(
                 "snapshot_restored",
@@ -320,9 +363,7 @@ class SnapshotManager:
             )
             raise
 
-    def auto_rollback_trigger(
-        self, snapshot_id: str, condition: str
-    ) -> bool:
+    def auto_rollback_trigger(self, snapshot_id: str, condition: str) -> bool:
         """
         Trigger automatic rollback based on condition.
 
@@ -344,6 +385,8 @@ class SnapshotManager:
         )
 
         try:
+            if not self.get_snapshot_info(snapshot_id):
+                raise ValueError(f"Snapshot not found: {snapshot_id}")
             self.restore_snapshot(snapshot_id)
 
             logger.info(
@@ -363,7 +406,7 @@ class SnapshotManager:
                 error=str(e),
                 session_id=self.session_id,
             )
-            return False
+            raise
 
     def list_snapshots(self) -> List[Dict[str, Any]]:
         """
@@ -421,6 +464,9 @@ class SnapshotManager:
                 logger.warning("snapshot_image_not_found", snapshot_id=snapshot_id)
 
             # Remove from tracking
+            info = self.get_snapshot_info(snapshot_id)
+            if info and info.get("archive"):
+                Path(info["archive"]).unlink(missing_ok=True)
             self.snapshots = [s for s in self.snapshots if s["id"] != snapshot_id]
 
             logger.info(
@@ -500,7 +546,7 @@ class SnapshotManager:
         """
         volumes = {}
         for bind in binds:
-            parts = bind.split(":")
+            parts = bind.rsplit(":", 2)
             if len(parts) >= 2:
                 host_path = parts[0]
                 container_path = parts[1]

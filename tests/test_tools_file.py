@@ -35,9 +35,7 @@ def temp_repo() -> Generator[Path, None, None]:
         (repo_path / "test_file.py").write_text("".join(lines))
 
         # Create small test file
-        (repo_path / "small.txt").write_text(
-            "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n"
-        )
+        (repo_path / "small.txt").write_text("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
 
         # Create large file (for truncation testing)
         large_content = "x" * 60000  # 60KB, exceeds 50K limit
@@ -73,10 +71,7 @@ class TestReadFileTool:
     def test_read_with_line_range(self, temp_repo: Path) -> None:
         """Test reading specific line range."""
         tool = ReadFileTool()
-        result = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            line_range={"start": 2, "end": 4}
-        )
+        result = tool.execute(path=str(temp_repo / "small.txt"), line_range={"start": 2, "end": 4})
 
         assert result.error is None
         assert result.output is not None
@@ -89,10 +84,7 @@ class TestReadFileTool:
     def test_read_from_start_line(self, temp_repo: Path) -> None:
         """Test reading from start line to end."""
         tool = ReadFileTool()
-        result = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            line_range={"start": 3}
-        )
+        result = tool.execute(path=str(temp_repo / "small.txt"), line_range={"start": 3})
 
         assert result.error is None
         assert result.output is not None
@@ -104,10 +96,7 @@ class TestReadFileTool:
     def test_read_to_end_line(self, temp_repo: Path) -> None:
         """Test reading from beginning to end line."""
         tool = ReadFileTool()
-        result = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            line_range={"end": 3}
-        )
+        result = tool.execute(path=str(temp_repo / "small.txt"), line_range={"end": 3})
 
         assert result.error is None
         assert result.output is not None
@@ -150,10 +139,7 @@ class TestReadFileTool:
     def test_invalid_line_range(self, temp_repo: Path) -> None:
         """Test invalid line range (start > end)."""
         tool = ReadFileTool()
-        result = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            line_range={"start": 4, "end": 2}
-        )
+        result = tool.execute(path=str(temp_repo / "small.txt"), line_range={"start": 4, "end": 2})
 
         assert result.error is not None
         assert "invalid" in result.error.lower() or "range" in result.error.lower()
@@ -162,8 +148,7 @@ class TestReadFileTool:
         """Test line range exceeding file length."""
         tool = ReadFileTool()
         result = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            line_range={"start": 1, "end": 1000}
+            path=str(temp_repo / "small.txt"), line_range={"start": 1, "end": 1000}
         )
 
         # Should succeed but only return available lines
@@ -178,10 +163,7 @@ class TestReadFileWithContextTool:
     def test_read_with_default_context(self, temp_repo: Path) -> None:
         """Test reading with default 50 lines context."""
         tool = ReadFileWithContextTool()
-        result = tool.execute(
-            path=str(temp_repo / "test_file.py"),
-            focus_lines=[50]
-        )
+        result = tool.execute(path=str(temp_repo / "test_file.py"), focus_lines=[50])
 
         assert result.error is None
         assert result.output is not None
@@ -196,9 +178,7 @@ class TestReadFileWithContextTool:
         """Test reading with custom context lines."""
         tool = ReadFileWithContextTool()
         result = tool.execute(
-            path=str(temp_repo / "test_file.py"),
-            focus_lines=[20],
-            context_lines=5
+            path=str(temp_repo / "test_file.py"), focus_lines=[20], context_lines=5
         )
 
         assert result.error is None
@@ -214,9 +194,7 @@ class TestReadFileWithContextTool:
         """Test reading multiple focus lines."""
         tool = ReadFileWithContextTool()
         result = tool.execute(
-            path=str(temp_repo / "test_file.py"),
-            focus_lines=[10, 50],
-            context_lines=3
+            path=str(temp_repo / "test_file.py"), focus_lines=[10, 50], context_lines=3
         )
 
         assert result.error is None
@@ -231,18 +209,14 @@ class TestReadFileWithContextTool:
 
         # Test at start
         result_start = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            focus_lines=[1],
-            context_lines=50
+            path=str(temp_repo / "small.txt"), focus_lines=[1], context_lines=50
         )
         assert result_start.error is None
         assert "Line 1" in result_start.output
 
         # Test at end
         result_end = tool.execute(
-            path=str(temp_repo / "small.txt"),
-            focus_lines=[5],
-            context_lines=50
+            path=str(temp_repo / "small.txt"), focus_lines=[5], context_lines=50
         )
         assert result_end.error is None
         assert "Line 5" in result_end.output
@@ -250,10 +224,7 @@ class TestReadFileWithContextTool:
     def test_nonexistent_file(self) -> None:
         """Test reading nonexistent file with context."""
         tool = ReadFileWithContextTool()
-        result = tool.execute(
-            path="/nonexistent/file.txt",
-            focus_lines=[10]
-        )
+        result = tool.execute(path="/nonexistent/file.txt", focus_lines=[10])
 
         assert result.error is not None
 
@@ -272,10 +243,7 @@ class TestReadFileWithContextTool:
     def test_truncation_at_50k_chars(self, temp_repo: Path) -> None:
         """Test content truncated at 50,000 characters."""
         tool = ReadFileWithContextTool()
-        result = tool.execute(
-            path=str(temp_repo / "large.txt"),
-            focus_lines=[1]
-        )
+        result = tool.execute(path=str(temp_repo / "large.txt"), focus_lines=[1])
 
         assert result.error is None
         assert result.output is not None
@@ -290,8 +258,11 @@ class TestApplyPatchTool:
         """Test applying patch without conflicts."""
         # Initialize git repo for patch to work
         import subprocess
+
         subprocess.run(["git", "init"], cwd=temp_repo, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True
+        )
         subprocess.run(["git", "config", "user.name", "Test"], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "add", "."], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=temp_repo, capture_output=True)
@@ -310,10 +281,7 @@ class TestApplyPatchTool:
         )
 
         tool = ApplyPatchTool()
-        result = tool.execute(
-            path=str(temp_repo / "patch_target.py"),
-            patch=patch_content
-        )
+        result = tool.execute(path=str(temp_repo / "patch_target.py"), patch=patch_content)
 
         assert result.error is None
         assert result.output is not None
@@ -327,8 +295,11 @@ class TestApplyPatchTool:
         """Test applying patch with conflicts."""
         # Initialize git repo
         import subprocess
+
         subprocess.run(["git", "init"], cwd=temp_repo, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True
+        )
         subprocess.run(["git", "config", "user.name", "Test"], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "add", "."], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=temp_repo, capture_output=True)
@@ -358,10 +329,7 @@ class TestApplyPatchTool:
         )
 
         tool = ApplyPatchTool()
-        result = tool.execute(
-            path=str(temp_repo / "patch_target.py"),
-            patch=patch_content
-        )
+        result = tool.execute(path=str(temp_repo / "patch_target.py"), patch=patch_content)
 
         assert result.error is not None or (result.output and "conflict" in result.output.lower())
 
@@ -375,10 +343,7 @@ class TestApplyPatchTool:
 """
 
         tool = ApplyPatchTool()
-        result = tool.execute(
-            path="/nonexistent/file.py",
-            patch=patch_content
-        )
+        result = tool.execute(path="/nonexistent/file.py", patch=patch_content)
 
         assert result.error is not None
 
@@ -386,8 +351,7 @@ class TestApplyPatchTool:
         """Test applying invalid patch format."""
         tool = ApplyPatchTool()
         result = tool.execute(
-            path=str(temp_repo / "patch_target.py"),
-            patch="This is not a valid patch"
+            path=str(temp_repo / "patch_target.py"), patch="This is not a valid patch"
         )
 
         assert result.error is not None
@@ -412,8 +376,11 @@ class TestApplyPatchDryRunTool:
         """Test dry run with patch that would apply cleanly."""
         # Initialize git repo
         import subprocess
+
         subprocess.run(["git", "init"], cwd=temp_repo, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True
+        )
         subprocess.run(["git", "config", "user.name", "Test"], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "add", "."], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=temp_repo, capture_output=True)
@@ -432,10 +399,7 @@ class TestApplyPatchDryRunTool:
         )
 
         tool = ApplyPatchDryRunTool()
-        result = tool.execute(
-            path=str(temp_repo / "patch_target.py"),
-            patch=patch_content
-        )
+        result = tool.execute(path=str(temp_repo / "patch_target.py"), patch=patch_content)
 
         assert result.error is None
         assert result.output is not None
@@ -450,8 +414,11 @@ class TestApplyPatchDryRunTool:
         """Test dry run detecting conflicts."""
         # Initialize git repo
         import subprocess
+
         subprocess.run(["git", "init"], cwd=temp_repo, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"], cwd=temp_repo, capture_output=True
+        )
         subprocess.run(["git", "config", "user.name", "Test"], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "add", "."], cwd=temp_repo, capture_output=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=temp_repo, capture_output=True)
@@ -481,10 +448,7 @@ class TestApplyPatchDryRunTool:
         )
 
         tool = ApplyPatchDryRunTool()
-        result = tool.execute(
-            path=str(temp_repo / "patch_target.py"),
-            patch=patch_content
-        )
+        result = tool.execute(path=str(temp_repo / "patch_target.py"), patch=patch_content)
 
         assert result.error is not None or (result.output and "conflict" in result.output.lower())
 
@@ -502,10 +466,7 @@ class TestApplyPatchDryRunTool:
 """
 
         tool = ApplyPatchDryRunTool()
-        result = tool.execute(
-            path="/nonexistent/file.py",
-            patch=patch_content
-        )
+        result = tool.execute(path="/nonexistent/file.py", patch=patch_content)
 
         assert result.error is not None
 

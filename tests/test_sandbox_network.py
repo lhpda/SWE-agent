@@ -150,7 +150,7 @@ class TestNetworkLogging:
             domain="pypi.org",
             url="https://pypi.org/simple/",
             allowed=True,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
         # Check log file exists
@@ -170,7 +170,7 @@ class TestNetworkLogging:
             domain="example.com",
             url="http://example.com",
             allowed=False,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
         # Check log file exists
@@ -188,10 +188,7 @@ class TestNetworkLogging:
 
         timestamp = datetime.utcnow()
         network_manager.log_request(
-            domain="pypi.org",
-            url="https://pypi.org",
-            allowed=True,
-            timestamp=timestamp
+            domain="pypi.org", url="https://pypi.org", allowed=True, timestamp=timestamp
         )
 
         log_files = list(Path(temp_log_dir).glob("*.log"))
@@ -205,10 +202,7 @@ class TestNetworkLogging:
         network_manager.set_log_dir(temp_log_dir)
 
         network_manager.log_request(
-            domain="pypi.org",
-            url="https://pypi.org",
-            allowed=True,
-            timestamp=datetime.utcnow()
+            domain="pypi.org", url="https://pypi.org", allowed=True, timestamp=datetime.utcnow()
         )
 
         log_files = list(Path(temp_log_dir).glob("*.log"))
@@ -227,7 +221,7 @@ class TestNetworkLogging:
                 domain=domain,
                 url=f"https://{domain}",
                 allowed=network_manager.is_whitelisted(domain),
-                timestamp=datetime.utcnow()
+                timestamp=datetime.utcnow(),
             )
 
         log_files = list(Path(temp_log_dir).glob("*.log"))
@@ -372,10 +366,7 @@ class TestNetworkManagerErrorHandling:
         # Should handle gracefully (use default or skip)
         try:
             network_manager.log_request(
-                domain="pypi.org",
-                url="https://pypi.org",
-                allowed=True,
-                timestamp=datetime.utcnow()
+                domain="pypi.org", url="https://pypi.org", allowed=True, timestamp=datetime.utcnow()
             )
         except Exception as e:
             pytest.fail(f"Should handle missing log_dir gracefully: {e}")

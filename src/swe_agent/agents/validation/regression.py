@@ -110,5 +110,5 @@ class RegressionDetector:
             "new_failures": new_failures,
             "fixed_tests": fixed_tests,
             "still_failing": still_failing,
-            "net_change": net_change
+            "net_change": net_change,
         }

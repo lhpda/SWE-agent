@@ -115,9 +115,7 @@ class StateMachine:
         """
         # Check if we're in a terminal state
         if self._current_state in {State.DONE, State.FAILED}:
-            raise ValueError(
-                f"Cannot transition from terminal state {self._current_state.value}"
-            )
+            raise ValueError(f"Cannot transition from terminal state {self._current_state.value}")
 
         # Check if transition is valid
         if not self.can_transition(to_state):
@@ -211,9 +209,7 @@ class StateMachine:
 
         return instance
 
-    def _add_history_entry(
-        self, state: State, data: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def _add_history_entry(self, state: State, data: Optional[Dict[str, Any]] = None) -> None:
         """Add an entry to the state history.
 
         Args:
